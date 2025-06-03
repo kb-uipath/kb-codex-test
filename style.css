@@ -7,3 +7,15 @@ body {
 #task-list .task-item {
     cursor: pointer;
 }
+
+/* Add styles for loading indicator and error message */
+#loading-indicator {
+    z-index: 1050;
+}
+
+#error-message {
+    z-index: 1050;
+    min-width: 300px;
+    max-width: 80%;
+    text-align: center;
+}
