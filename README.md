@@ -7,7 +7,7 @@ Data persists in the browser via `localStorage`, so no external database is requ
 ## Features
 - Unified list of accounts and tasks
 - OKR tracking: risk mitigation, upsell/cross-sell, success stories, and executive meetings
-- Add and update tasks directly in the dashboard
+- Add, edit, and delete tasks and accounts directly in the dashboard
 - Search box and drop-down filters to quickly find tasks
 
 ## Setup

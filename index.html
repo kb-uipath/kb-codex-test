@@ -6,6 +6,7 @@
     <title>CSM Dashboard</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 </head>
 <body>
     <div class="container-fluid" id="app">
@@ -84,6 +85,77 @@
                     <h2>OKR Summary</h2>
                     <ul id="okr-metrics" class="list-group list-group-flush"></ul>
                 </section>
+
+                <!-- Edit Task Modal -->
+                <div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Task</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form id="edit-task-form">
+                                <div class="modal-body">
+                                    <input type="hidden" id="edit-task-id">
+                                    <div class="mb-3">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" id="edit-task-name" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Type</label>
+                                        <select id="edit-task-type" class="form-select">
+                                            <option value="Risk">Risk Mitigation</option>
+                                            <option value="Upsell">Upsell/Cross-sell</option>
+                                            <option value="Story">Success Story</option>
+                                            <option value="EBC">EBC/QBR</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Due Date</label>
+                                        <input type="date" id="edit-task-due" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Account Modal -->
+                <div class="modal fade" id="account-modal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit Account</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form id="edit-account-form">
+                                <div class="modal-body">
+                                    <input type="hidden" id="edit-account-id">
+                                    <div class="mb-3">
+                                        <label class="form-label">Account Name</label>
+                                        <input type="text" id="edit-account-name" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Health</label>
+                                        <select id="edit-account-health" class="form-select">
+                                            <option value="green">Healthy</option>
+                                            <option value="yellow">At Risk</option>
+                                            <option value="red">Critical</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </main>
         </div>
     </div>
