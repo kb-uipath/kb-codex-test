@@ -1,7 +1,10 @@
+3<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 // Local storage keys can be customized via config.js
 const STORAGE_KEY = window.STORAGE_KEY || 'csm_tasks';
@@ -71,6 +74,8 @@ function renderTasks(tasks) {
         btnGroup.appendChild(delBtn);
 
         li.appendChild(btnGroup);
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 // Database configuration
 const DB_NAME = 'csm_dashboard';
@@ -173,14 +178,18 @@ function renderTasks(tasks) {
             </div>
         `;
 #>>>>>>> main
+3>>>>>>> main
         list.appendChild(li);
     });
 }
 
+3<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 function addTask(name, type, due) {
     const tasks = getStoredTasks();
@@ -282,6 +291,8 @@ function deleteAccount(id) {
     saveAccounts(accts);
 }
 
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 function validateTask(name, type, due) {
     if (!name || name.trim() === '') {
@@ -355,6 +366,7 @@ async function deleteTask(id) {
 }
 
 #>>>>>>> main
+#>>>>>>> main
 function renderOKRs(tasks) {
     const metrics = {
         Risk: 0,
@@ -362,6 +374,9 @@ function renderOKRs(tasks) {
         Story: 0,
         EBC: 0
     };
+3<<<<<<< codex/design-csm-dashboard-outline
+    tasks.forEach(t => { metrics[t.type] = (metrics[t.type] || 0) + 1; });
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
@@ -370,6 +385,7 @@ function renderOKRs(tasks) {
     tasks.forEach(t => { metrics[t.type] = (metrics[t.type] || 0) + 1; });
 =======
     tasks.forEach(task => { metrics[task.type] = (metrics[task.type] || 0) + 1; });
+#>>>>>>> main
 #>>>>>>> main
     const list = document.getElementById('okr-metrics');
     list.innerHTML = '';
@@ -385,10 +401,13 @@ function renderOKRs(tasks) {
     });
 }
 
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 document.getElementById('nav-tasks').addEventListener('click', () => {
     document.getElementById('dashboard').classList.remove('d-none');
@@ -409,6 +428,8 @@ document.getElementById('nav-okr').addEventListener('click', () => {
     document.getElementById('accounts').classList.add('d-none');
     document.getElementById('okr').classList.remove('d-none');
     const tasks = fetchTasks();
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 // Add search functionality
 function searchTasks(query) {
@@ -448,6 +469,7 @@ document.getElementById('nav-okr').addEventListener('click', async () => {
     document.getElementById('okr').classList.remove('d-none');
     const tasks = await fetchTasks();
 #>>>>>>> main
+#>>>>>>> main
     renderOKRs(tasks);
 });
 
@@ -460,10 +482,13 @@ document.getElementById('task-form').addEventListener('submit', (e) => {
     e.target.reset();
 });
 
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 document.getElementById('account-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -552,6 +577,8 @@ document.getElementById('edit-account-form').addEventListener('submit', (e) => {
 
 // Load tasks by default
 refreshTaskList();
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 // Initialize the app
 document.addEventListener('DOMContentLoaded', async () => {
@@ -564,4 +591,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         showError(`Failed to initialize database: ${err.message}`);
     }
 });
+#>>>>>>> main
 #>>>>>>> main

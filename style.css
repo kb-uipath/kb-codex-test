@@ -4,6 +4,9 @@ body {
 .sidebar {
     min-height: 100vh;
 }
+#<<<<<<< codex/design-csm-dashboard-outline
+
+=======
 #task-list .task-item {
     cursor: pointer;
 }
@@ -42,4 +45,5 @@ body {
 .text-muted {
     font-size: 0.875rem;
 }
+#>>>>>>> main
 #>>>>>>> main

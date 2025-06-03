@@ -1,5 +1,8 @@
 # Build Plan for CSM Dashboard
 
+#<<<<<<< codex/design-csm-dashboard-outline
+This document outlines the steps to implement a simple web-based CSM dashboard using the browser's local storage as the data store.
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
@@ -9,14 +12,18 @@ This document outlines the steps to implement a simple web-based CSM dashboard u
 =======
 This document outlines the steps to implement a simple web-based CSM dashboard using IndexedDB for local data storage.
 #>>>>>>> main
+#>>>>>>> main
 
 ## Goals
 - Provide a responsive interface for viewing and updating customer tasks
 - Track OKRs: risk mitigation, upsell/cross-sell, success stories, and EBC/QBRs
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 - Persist data locally using `localStorage`
 
@@ -43,6 +50,8 @@ This document outlines the steps to implement a simple web-based CSM dashboard u
    - Add a drop-down to filter tasks by type
 
 This plan keeps the implementation lightweight while demonstrating core functionality from the PRD.
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 - Implement local data persistence using IndexedDB
 - Ensure mobile-friendly design and real-time updates
@@ -101,4 +110,5 @@ This plan keeps the implementation lightweight while demonstrating core function
    - Optimize IndexedDB operations
 
 This plan reflects the current implementation while outlining future improvements to enhance functionality and user experience.
+#>>>>>>> main
 #>>>>>>> main

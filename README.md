@@ -1,9 +1,12 @@
 # CSM Dashboard
 
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
 =======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 #>>>>>>> main
 A lightweight "central operating system" for Customer Success Managers (CSMs). The dashboard helps manage risk mitigation plans, upsell or cross-sell opportunities, customer success stories, and executive business reviews.
 
@@ -53,6 +56,8 @@ Contributions are welcome! Fork the repository, create a branch for your changes
 
 ## License
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 =======
 This project provides a simple Customer Success Manager (CSM) dashboard acting as a central operating system. It demonstrates how a small team might manage customer risk mitigation plans, upsell or cross-sell opportunities, success stories, and executive business reviews using a lightweight web application.
 
@@ -77,4 +82,5 @@ This application is designed to work completely offline once loaded. It uses Ind
 
 1. Clone this repository:
    ```
+#>>>>>>> main
 #>>>>>>> main
