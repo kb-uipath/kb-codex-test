@@ -15,68 +15,11 @@ The app uses IndexedDB for local data storage and serves a responsive web interf
 - Responsive design with mobile support
 - Real-time updates and error handling
 
+## Offline Capabilities
+
+This application is designed to work completely offline once loaded. It uses IndexedDB for local data storage, ensuring that all your tasks and OKR metrics are available even without an internet connection. Any changes made while offline will be synchronized when you reconnect.
+
 ## Setup
 
 1. Clone this repository:
-   ```bash
-   git clone [repository-url]
-   cd csm-dashboard
    ```
-
-2. Serve the files using a local server. You have several options:
-
-   Using Python:
-   ```bash
-   # Python 3
-   python -m http.server 8080
-   
-   # Python 2
-   python -m SimpleHTTPServer 8080
-   ```
-
-   Using Node.js:
-   ```bash
-   # Install http-server globally
-   npm install -g http-server
-   
-   # Run the server
-   http-server -p 8080
-   ```
-
-3. Open `http://localhost:8080` in your browser
-
-4. The app will automatically create and initialize the local IndexedDB database on first load.
-
-## Data Structure
-
-Tasks are stored in IndexedDB with the following properties:
-- `id`: Auto-incrementing unique identifier
-- `name`: Task description
-- `type`: One of "Risk", "Upsell", "Story", or "EBC"
-- `due`: Optional due date
-- `createdAt`: Timestamp of when the task was created
-
-## Development
-
-### Project Structure
-- `index.html`: Main application interface
-- `style.css`: Custom styles
-- `app.js`: Application logic and IndexedDB operations
-- `bootstrap.min.css`: Bootstrap framework styles
-- `bootstrap.bundle.min.js`: Bootstrap JavaScript components
-
-### Adding New Features
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
-## Contributing
-
-Contributions are welcome! Please open issues or pull requests to suggest improvements. When submitting code, follow conventional commit messages and ensure any new features include documentation.
-
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
-
