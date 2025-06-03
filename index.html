@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSM Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container-fluid" id="app">
+        <header class="py-3 text-center bg-primary text-white">
+            <h1>CSM Dashboard</h1>
+        </header>
+        <div class="row flex-nowrap">
+            <nav class="col-12 col-md-3 col-xl-2 p-3 bg-light sidebar">
+                <h5>Navigation</h5>
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="#" id="nav-tasks">Tasks</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="nav-accounts">Accounts</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="nav-okr">OKRs</a></li>
+                </ul>
+            </nav>
+            <main class="col px-4 py-3" id="main-content">
+                <section id="dashboard" class="d-none">
+                    <h2>Your Tasks</h2>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <input type="text" id="task-search" class="form-control" placeholder="Search tasks">
+                        </div>
+                        <div class="col-md-4">
+                            <select id="task-filter" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="Risk">Risk Mitigation</option>
+                                <option value="Upsell">Upsell/Cross-sell</option>
+                                <option value="Story">Success Story</option>
+                                <option value="EBC">EBC/QBR</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="task-list" class="list-group mb-3"></div>
+                    <h3>Add Task</h3>
+                    <form id="task-form" class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" id="task-name" class="form-control" placeholder="Task description" required>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="task-type" class="form-select">
+                                <option value="Risk">Risk Mitigation</option>
+                                <option value="Upsell">Upsell/Cross-sell</option>
+                                <option value="Story">Success Story</option>
+                                <option value="EBC">EBC/QBR</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="date" id="task-due" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" type="submit">Add</button>
+                        </div>
+                    </form>
+                </section>
+                <section id="accounts" class="d-none">
+                    <h2>Accounts</h2>
+                    <div id="account-list" class="list-group mb-3"></div>
+                    <h3>Add Account</h3>
+                    <form id="account-form" class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" id="account-name" class="form-control" placeholder="Account name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <select id="account-health" class="form-select">
+                                <option value="green">Healthy</option>
+                                <option value="yellow">At Risk</option>
+                                <option value="red">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" type="submit">Add</button>
+                        </div>
+                    </form>
+                </section>
+                <section id="okr" class="d-none">
+                    <h2>OKR Summary</h2>
+                    <ul id="okr-metrics" class="list-group list-group-flush"></ul>
+                </section>
+            </main>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Optional user configuration -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
