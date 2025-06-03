@@ -1,0 +1,9 @@
+body {
+    font-family: Arial, sans-serif;
+}
+.sidebar {
+    min-height: 100vh;
+}
+#task-list .task-item {
+    cursor: pointer;
+}
