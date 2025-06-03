@@ -4,4 +4,46 @@ body {
 .sidebar {
     min-height: 100vh;
 }
+#<<<<<<< codex/design-csm-dashboard-outline
 
+=======
+#task-list .task-item {
+    cursor: pointer;
+}
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
+=======
+
+/* Add styles for loading indicator and error message */
+#loading-indicator {
+    z-index: 1050;
+}
+
+#error-message {
+    z-index: 1050;
+    min-width: 300px;
+    max-width: 80%;
+    text-align: center;
+}
+
+#search-input {
+    max-width: 300px;
+    margin-bottom: 1rem;
+}
+
+.task-item {
+    transition: background-color 0.2s ease;
+}
+
+.task-item:hover {
+    background-color: #f8f9fa;
+}
+
+.text-muted {
+    font-size: 0.875rem;
+}
+#>>>>>>> main
+#>>>>>>> main
