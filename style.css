@@ -7,7 +7,11 @@ body {
 #task-list .task-item {
     cursor: pointer;
 }
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
 #<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 =======
 
 /* Add styles for loading indicator and error message */
