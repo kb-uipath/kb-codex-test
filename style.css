@@ -19,3 +19,20 @@ body {
     max-width: 80%;
     text-align: center;
 }
+
+#search-input {
+    max-width: 300px;
+    margin-bottom: 1rem;
+}
+
+.task-item {
+    transition: background-color 0.2s ease;
+}
+
+.task-item:hover {
+    background-color: #f8f9fa;
+}
+
+.text-muted {
+    font-size: 0.875rem;
+}

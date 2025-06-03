@@ -74,6 +74,15 @@ async function fetchTasks() {
 function renderTasks(tasks) {
     const list = document.getElementById('task-list');
     list.innerHTML = '';
+    
+    if (tasks.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'text-center text-muted py-4';
+        emptyState.innerHTML = 'No tasks found';
+        list.appendChild(emptyState);
+        return;
+    }
+
     tasks.forEach((task) => {
         const li = document.createElement('div');
         li.className = 'list-group-item task-item';
@@ -186,6 +195,33 @@ function renderOKRs(tasks) {
     });
 }
 
+// Add search functionality
+function searchTasks(query) {
+    if (!query) {
+        fetchTasks();
+        return;
+    }
+
+    const searchQuery = query.toLowerCase();
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+        const tasks = request.result;
+        const filteredTasks = tasks.filter(task => 
+            task.name.toLowerCase().includes(searchQuery) ||
+            task.type.toLowerCase().includes(searchQuery)
+        );
+        renderTasks(filteredTasks);
+    };
+}
+
+// Add search event listener
+document.getElementById('search-input').addEventListener('input', (e) => {
+    searchTasks(e.target.value);
+});
+
 document.getElementById('nav-tasks').addEventListener('click', () => {
     document.getElementById('dashboard').classList.remove('d-none');
     document.getElementById('okr').classList.add('d-none');
@@ -212,7 +248,9 @@ document.getElementById('task-form').addEventListener('submit', (e) => {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await initDB();
-        fetchTasks();
+        // Show tasks view by default
+        document.getElementById('dashboard').classList.remove('d-none');
+        await fetchTasks();
     } catch (err) {
         showError(`Failed to initialize database: ${err.message}`);
     }
