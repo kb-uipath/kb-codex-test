@@ -7,6 +7,8 @@ body {
 #task-list .task-item {
     cursor: pointer;
 }
+#<<<<<<< codex/design-csm-dashboard-outline
+=======
 
 /* Add styles for loading indicator and error message */
 #loading-indicator {
@@ -36,3 +38,4 @@ body {
 .text-muted {
     font-size: 0.875rem;
 }
+#>>>>>>> main
