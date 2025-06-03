@@ -1,6 +1,10 @@
 # CSM Dashboard
 
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 A lightweight "central operating system" for Customer Success Managers (CSMs). The dashboard helps manage risk mitigation plans, upsell or cross-sell opportunities, customer success stories, and executive business reviews.
 
 Data persists in the browser via `localStorage`, so no external database is required. The app is built with plain HTML, CSS, and JavaScript.

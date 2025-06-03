@@ -1,4 +1,8 @@
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 // Local storage keys can be customized via config.js
 const STORAGE_KEY = window.STORAGE_KEY || 'csm_tasks';
 const ACCOUNT_KEY = window.ACCOUNT_KEY || 'csm_accounts';
@@ -174,6 +178,10 @@ function renderTasks(tasks) {
 }
 
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 function addTask(name, type, due) {
     const tasks = getStoredTasks();
     tasks.push({ id: generateId(), name, type, due });
@@ -355,6 +363,10 @@ function renderOKRs(tasks) {
         EBC: 0
     };
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
     tasks.forEach(t => { metrics[t.type] = (metrics[t.type] || 0) + 1; });
 =======
     tasks.forEach(task => { metrics[task.type] = (metrics[task.type] || 0) + 1; });
@@ -374,6 +386,10 @@ function renderOKRs(tasks) {
 }
 
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 document.getElementById('nav-tasks').addEventListener('click', () => {
     document.getElementById('dashboard').classList.remove('d-none');
     document.getElementById('accounts').classList.add('d-none');
@@ -445,6 +461,10 @@ document.getElementById('task-form').addEventListener('submit', (e) => {
 });
 
 #<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
+=======
+#<<<<<<< codex/design-csm-dashboard-outline
+#>>>>>>> main
 document.getElementById('account-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('account-name').value;
