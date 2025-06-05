@@ -4,9 +4,10 @@ const ACCOUNT_KEY = window.ACCOUNT_KEY || 'csm_accounts';
 
 // Database configuration
 const DB_NAME = 'csm_dashboard';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'tasks';
 const ACCOUNT_STORE = 'accounts';
+const OKR_STORE_NAME = 'okr_targets';
 
 // Vertical and sub-vertical mappings
 const VERTICALS = {
@@ -47,6 +48,9 @@ function initDB() {
                 const store = db.createObjectStore(ACCOUNT_STORE, { keyPath: 'id', autoIncrement: true });
                 store.createIndex('health', 'health', { unique: false });
             }
+            if (!db.objectStoreNames.contains(OKR_STORE_NAME)) {
+                db.createObjectStore(OKR_STORE_NAME, { keyPath: 'type' });
+            }
         };
     });
 }
@@ -70,20 +74,6 @@ const showError = (message) => {
 
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-function getStoredTasks() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch (err) {
-        console.error('Failed to load tasks', err);
-        return [];
-    }
-}
-
-function saveTasks(tasks) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
 }
 
 function ensureDBInitialized() {
@@ -298,20 +288,6 @@ async function deleteTask(id) {
     }
 }
 
-function getStoredAccounts() {
-    try {
-        const raw = localStorage.getItem(ACCOUNT_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch (err) {
-        console.error('Failed to load accounts', err);
-        return [];
-    }
-}
-
-function saveAccounts(accts) {
-    localStorage.setItem(ACCOUNT_KEY, JSON.stringify(accts));
-}
-
 async function fetchAccounts() {
     try {
         await ensureDBInitialized();
@@ -411,6 +387,7 @@ async function addAccount(name, vertical, subVertical, arr) {
         });
 
         await fetchAccounts();
+        await populateAccountDropdown();
     } catch (err) {
         console.error('Failed to add account', err);
         showError(`Failed to add account: ${err.message}`);
@@ -431,6 +408,7 @@ async function updateAccount(id, name, vertical, subVertical, arr) {
         });
 
         await fetchAccounts();
+        await populateAccountDropdown();
     } catch (err) {
         console.error('Failed to update account', err);
         showError(`Failed to update account: ${err.message}`);
@@ -450,6 +428,7 @@ async function deleteAccount(id) {
         });
 
         await fetchAccounts();
+        await populateAccountDropdown();
     } catch (err) {
         console.error('Failed to delete account', err);
         showError(`Failed to delete account: ${err.message}`);
@@ -459,23 +438,54 @@ async function deleteAccount(id) {
 const OKR_TYPES = ['Risk', 'Upsell', 'Story', 'EBC'];
 const OKR_TARGETS_KEY = 'okr_targets';
 
-function getOKRTargets() {
-    const raw = localStorage.getItem(OKR_TARGETS_KEY);
-    if (raw) {
+async function getOKRTargets() {
+    await ensureDBInitialized();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([OKR_STORE_NAME], 'readonly');
+        const store = transaction.objectStore(OKR_STORE_NAME);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const targetsArray = request.result;
+            const targets = {};
+            targetsArray.forEach(item => {
+                targets[item.type] = item.target;
+            });
+            resolve(targets);
+        };
+        request.onerror = () => reject(new Error('Failed to fetch OKR targets'));
+    });
+}
+
+async function saveOKRTargets(targets) {
+    await ensureDBInitialized();
+    return new Promise(async (resolve, reject) => {
+        const transaction = db.transaction([OKR_STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(OKR_STORE_NAME);
         try {
-            return JSON.parse(raw);
-        } catch {
-            return {};
+            // Clear existing targets before adding new ones
+            await new Promise((res, rej) => {
+                const clearRequest = store.clear();
+                clearRequest.onsuccess = () => res();
+                clearRequest.onerror = () => rej(new Error('Failed to clear OKR targets'));
+            });
+            for (const type in targets) {
+                if (targets.hasOwnProperty(type)) {
+                    await new Promise((res, rej) => {
+                        const putRequest = store.put({ type, target: targets[type] });
+                        putRequest.onsuccess = () => res();
+                        putRequest.onerror = () => rej(new Error(`Failed to save OKR target for ${type}`));
+                    });
+                }
+            }
+            resolve();
+        } catch (err) {
+            reject(err);
         }
-    }
-    return {};
+    });
 }
 
-function saveOKRTargets(targets) {
-    localStorage.setItem(OKR_TARGETS_KEY, JSON.stringify(targets));
-}
-
-function renderOKRs(tasks) {
+async function renderOKRs(tasks) {
     const metrics = {};
     const completedMetrics = {};
     const uncompletedMetrics = {};
@@ -489,7 +499,7 @@ function renderOKRs(tasks) {
         if (t.completed) completedMetrics[t.type] = (completedMetrics[t.type] || 0) + 1;
         else uncompletedMetrics[t.type] = (uncompletedMetrics[t.type] || 0) + 1;
     });
-    const targets = getOKRTargets();
+    const targets = await getOKRTargets();
     const list = document.getElementById('okr-metrics');
     list.innerHTML = '';
     OKR_TYPES.forEach(type => {
@@ -526,16 +536,16 @@ function renderOKRs(tasks) {
 
 const okrForm = document.getElementById('okr-targets-form');
 if (okrForm) {
-    okrForm.addEventListener('input', function(e) {
+    okrForm.addEventListener('input', async function(e) {
         if (e.target.classList.contains('okr-target-input')) {
             const type = e.target.getAttribute('data-okr-type');
             let value = parseInt(e.target.value, 10);
             if (isNaN(value) || value < 1) value = 1;
-            const targets = getOKRTargets();
+            const targets = await getOKRTargets();
             targets[type] = value;
-            saveOKRTargets(targets);
+            await saveOKRTargets(targets);
             // Re-render with updated targets
-            renderOKRs(getStoredTasks());
+            await renderOKRs(await fetchTasks());
         }
     });
 }
@@ -578,7 +588,7 @@ if (navOkr) {
         document.getElementById('okr').classList.remove('d-none');
         await ensureDBInitialized();
         const tasks = await fetchTasks();
-        renderOKRs(tasks);
+        await renderOKRs(tasks);
     });
 }
 
@@ -597,13 +607,13 @@ if (taskForm) {
 
 const accountForm = document.getElementById('account-form');
 if (accountForm) {
-    accountForm.addEventListener('submit', (e) => {
+    accountForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('account-name').value;
         const vertical = document.getElementById('account-vertical').value;
         const subVertical = document.getElementById('account-sub-vertical').value;
         const arr = document.getElementById('account-arr').value;
-        addAccount(name, vertical, subVertical, arr);
+        await addAccount(name, vertical, subVertical, arr);
         e.target.reset();
     });
 }
@@ -786,9 +796,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
         // Render OKRs initially
-        await ensureDBInitialized();
         const tasks = await fetchTasks();
-        renderOKRs(tasks);
+        await renderOKRs(tasks);
     } catch (err) {
         console.error('Failed to initialize application', err);
         showError('Failed to initialize application. Please refresh the page.');
