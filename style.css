@@ -1,49 +1,283 @@
-body {
-    font-family: Arial, sans-serif;
+:root {
+    /* UiPath Brand Colors */
+    --uipath-primary: #FA4616;      /* UiPath Orange */
+    --uipath-secondary: #2C3E50;    /* Dark Blue */
+    --uipath-accent: #3498DB;       /* Light Blue */
+    --uipath-success: #27AE60;      /* Green */
+    --uipath-warning: #F1C40F;      /* Yellow */
+    --uipath-danger: #E74C3C;       /* Red */
+    --uipath-light: #F8F9FA;        /* Light Gray */
+    --uipath-dark: #2C3E50;         /* Dark Blue */
+    --uipath-text: #2C3E50;         /* Dark Blue for text */
+    --uipath-bg: #FFFFFF;           /* White background */
+    --uipath-border: rgba(0,0,0,0.08); /* Subtle border color */
+    --uipath-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--uipath-text);
+    background-color: var(--uipath-bg);
+    line-height: 1.6;
+}
+
+/* Header Styling */
+header {
+    background-color: var(--uipath-primary) !important;
+    box-shadow: var(--uipath-shadow);
+    padding: 1rem 0;
+}
+
+/* Sidebar Styling */
 .sidebar {
     min-height: 100vh;
+    background-color: var(--uipath-light);
+    border-right: 1px solid var(--uipath-border);
+    padding: 1.5rem 1rem;
 }
-#<<<<<<< codex/design-csm-dashboard-outline
 
-=======
-#task-list .task-item {
-    cursor: pointer;
+.nav-link {
+    color: var(--uipath-text);
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin: 4px 0;
+    padding: 0.75rem 1rem;
+    font-weight: 500;
 }
-#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
-#<<<<<<< uwjmy1-codex/design-csm-dashboard-outline
-=======
-#<<<<<<< codex/design-csm-dashboard-outline
-#>>>>>>> main
-=======
 
-/* Add styles for loading indicator and error message */
+.nav-link:hover {
+    background-color: rgba(250, 70, 22, 0.08);
+    color: var(--uipath-primary);
+    transform: translateX(4px);
+}
+
+.nav-link.active {
+    background-color: var(--uipath-primary);
+    color: white;
+    box-shadow: var(--uipath-shadow);
+}
+
+/* Task and Account Items */
+.task-item, .list-group-item {
+    border: 1px solid var(--uipath-border);
+    margin-bottom: 12px;
+    border-radius: 12px !important;
+    transition: all 0.2s ease;
+    padding: 1rem;
+    background-color: white;
+}
+
+.task-item:hover, .list-group-item:hover {
+    box-shadow: var(--uipath-shadow);
+    transform: translateY(-2px);
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background-color: var(--uipath-primary);
+    border-color: var(--uipath-primary);
+    box-shadow: 0 2px 4px rgba(250, 70, 22, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: #e03e0d;
+    border-color: #e03e0d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(250, 70, 22, 0.3);
+}
+
+.btn-outline-secondary {
+    color: var(--uipath-text);
+    border-color: var(--uipath-text);
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--uipath-text);
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Badges */
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+/* Forms */
+.form-control, .form-select {
+    border: 1px solid var(--uipath-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    transition: all 0.2s ease;
+    font-size: 0.95rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--uipath-primary);
+    box-shadow: 0 0 0 3px rgba(250, 70, 22, 0.15);
+}
+
+/* Loading Indicator */
 #loading-indicator {
     z-index: 1050;
+    background-color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
 }
 
+.spinner-border {
+    color: var(--uipath-primary);
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+/* Error Message */
 #error-message {
     z-index: 1050;
     min-width: 300px;
     max-width: 80%;
     text-align: center;
+    border-radius: 12px;
+    box-shadow: var(--uipath-shadow);
+    padding: 1rem;
+    background-color: white;
 }
 
+/* Search Input Group Customization */
+.input-group {
+    max-width: 350px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.input-group .input-group-text {
+    background: var(--uipath-light);
+    border: 1px solid var(--uipath-border);
+    border-right: none;
+    border-radius: 20px 0 0 20px !important;
+    padding-left: 1.1rem;
+    padding-right: 0.7rem;
+    display: flex;
+    align-items: center;
+}
+.input-group .form-control {
+    border: 1px solid var(--uipath-border);
+    border-left: none;
+    border-radius: 0 20px 20px 0 !important;
+    background: var(--uipath-light);
+    padding-left: 0.5rem;
+    padding-right: 1.25rem;
+    min-width: 0;
+}
+.input-group .form-control:focus {
+    background: white;
+    box-shadow: 0 0 0 3px rgba(250, 70, 22, 0.15);
+}
 #search-input {
-    max-width: 300px;
-    margin-bottom: 1rem;
+    max-width: unset;
+    margin-bottom: 0;
+    border-radius: 0 20px 20px 0 !important;
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
-.task-item {
-    transition: background-color 0.2s ease;
+/* Remove double border on focus */
+.input-group .form-control:focus {
+    border-color: var(--uipath-primary);
+    outline: none;
 }
 
-.task-item:hover {
-    background-color: #f8f9fa;
+/* Modal Styling */
+.modal-content {
+    border-radius: 16px;
+    border: none;
+    box-shadow: var(--uipath-shadow);
 }
 
+.modal-header {
+    background-color: var(--uipath-light);
+    border-radius: 16px 16px 0 0;
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    background-color: var(--uipath-light);
+    border-radius: 0 0 16px 16px;
+    padding: 1.5rem;
+}
+
+/* Section Headers */
+h2, h3 {
+    color: var(--uipath-text);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.5px;
+}
+
+/* Empty State */
 .text-muted {
+    color: #95a5a6 !important;
     font-size: 0.875rem;
+    font-weight: 500;
 }
-#>>>>>>> main
-#>>>>>>> main
+
+/* Card Styling */
+.card {
+    border: 1px solid var(--uipath-border);
+    border-radius: 12px;
+    box-shadow: var(--uipath-shadow);
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Styling */
+.table {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: var(--uipath-light);
+    border-bottom: 2px solid var(--uipath-border);
+    font-weight: 600;
+    padding: 1rem;
+}
+
+.table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--uipath-light);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--uipath-secondary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--uipath-primary);
+}

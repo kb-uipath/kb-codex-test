@@ -10,7 +10,7 @@
 #>>>>>>> main
 A lightweight "central operating system" for Customer Success Managers (CSMs). The dashboard helps manage risk mitigation plans, upsell or cross-sell opportunities, customer success stories, and executive business reviews.
 
-Data persists in the browser via `localStorage`, so no external database is required. The app is built with plain HTML, CSS, and JavaScript.
+Data persists in the browser via `IndexedDB`, so no external database is required. The app is built with plain HTML, CSS, and JavaScript.
 
 ## Features
 - Unified list of accounts and tasks
@@ -18,10 +18,20 @@ Data persists in the browser via `localStorage`, so no external database is requ
 - Add, edit, and delete tasks and accounts directly in the dashboard
 - Search box and drop-down filters to quickly find tasks
 - Responsive layout suitable for desktop or mobile use
+- Local data persistence using IndexedDB
+- Real-time updates and error handling
+
+## Offline Capabilities
+
+This application is designed to work completely offline once loaded. It uses IndexedDB for local data storage, ensuring that all your tasks and OKR metrics are available even without an internet connection. Any changes made while offline will be synchronized when you reconnect.
 
 ## Setup
-1. Clone this repository.
-2. (Optional) copy `config.example.js` to `config.js` to customise the local storage keys.
+
+1. Clone this repository:
+   ```bash
+   git clone [repository-url]
+   ```
+2. (Optional) copy `config.example.js` to `config.js` to customise the local storage keys (though IndexedDB is used, this file can still hold other configurations if needed).
 3. Serve the files from a static host or run a simple local server:
 
    ```bash
@@ -41,7 +51,7 @@ Data persists in the browser via `localStorage`, so no external database is requ
 
 ```javascript
 // config.js
-// Customize the keys used in localStorage
+// Customize the keys used in localStorage (used as fallback or for other settings)
 window.STORAGE_KEY = 'csm_tasks';
 window.ACCOUNT_KEY = 'csm_accounts';
 ```
