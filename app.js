@@ -252,6 +252,12 @@ async function addTask(name, type, due, accountId) {
         if (!document.getElementById('okr').classList.contains('d-none')) {
             await renderOKRs(await fetchTasks());
         }
+        if (!document.getElementById('vertical').classList.contains('d-none')) {
+            await renderVerticalRollup();
+        }
+        if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+            await renderSubVerticalRollup();
+        }
     } catch (err) {
         console.error('Failed to add task', err);
         showError(`Failed to add task: ${err.message}`);
@@ -297,6 +303,12 @@ async function updateTask(id, name, type, due, completed, accountId) {
         if (!document.getElementById('okr').classList.contains('d-none')) {
             await renderOKRs(await fetchTasks());
         }
+        if (!document.getElementById('vertical').classList.contains('d-none')) {
+            await renderVerticalRollup();
+        }
+        if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+            await renderSubVerticalRollup();
+        }
     } catch (err) {
         console.error('Failed to update task', err);
         showError(`Failed to update task: ${err.message}`);
@@ -321,6 +333,12 @@ async function deleteTask(id) {
         await refreshTaskList();
         if (!document.getElementById('okr').classList.contains('d-none')) {
             await renderOKRs(await fetchTasks());
+        }
+        if (!document.getElementById('vertical').classList.contains('d-none')) {
+            await renderVerticalRollup();
+        }
+        if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+            await renderSubVerticalRollup();
         }
     } catch (err) {
         console.error('Failed to delete task', err);
@@ -522,6 +540,12 @@ async function addAccount(name, vertical, subVertical, arr) {
 
         await fetchAccounts();
         await populateAccountDropdown();
+        if (!document.getElementById('vertical').classList.contains('d-none')) {
+            await renderVerticalRollup();
+        }
+        if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+            await renderSubVerticalRollup();
+        }
     } catch (err) {
         console.error('Failed to add account', err);
         showError(`Failed to add account: ${err.message}`);
@@ -547,6 +571,12 @@ async function updateAccount(id, name, vertical, subVertical, arr) {
 
         await fetchAccounts();
         await populateAccountDropdown();
+        if (!document.getElementById('vertical').classList.contains('d-none')) {
+            await renderVerticalRollup();
+        }
+        if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+            await renderSubVerticalRollup();
+        }
     } catch (err) {
         console.error('Failed to update account', err);
         showError(`Failed to update account: ${err.message}`);
@@ -577,6 +607,12 @@ async function deleteAccount(id) {
         setTimeout(async () => {
             await fetchAccounts();
             await populateAccountDropdown();
+            if (!document.getElementById('vertical').classList.contains('d-none')) {
+                await renderVerticalRollup();
+            }
+            if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+                await renderSubVerticalRollup();
+            }
         }, 100);
     } catch (err) {
         console.error('Failed to delete account', err);
@@ -679,22 +715,29 @@ async function renderOKRs(tasks) {
 
         OKR_TYPES.forEach(type => {
             const metric = okrSummary[type];
-            const percentage = metric.total > 0 ? (metric.completed / metric.total) * 100 : 0;
-            const progressColor = percentage === 100 ? 'bg-success' : (percentage > 50 ? 'bg-warning' : 'bg-danger');
+            const target = okrTargets[type] !== undefined ? okrTargets[type] : 0;
+
+            // Calculate widths for the two segments of the progress bar
+            const completedWidth = target > 0 ? (metric.completed / target) * 100 : 0;
+            const totalButNotCompletedWidth = target > 0 ? ((metric.total - metric.completed) / target) * 100 : 0;
+
+            const progressColorCompleted = completedWidth === 100 ? 'bg-success' : (completedWidth > 0 ? 'bg-danger' : '');
+            const progressColorTotal = totalButNotCompletedWidth > 0 ? 'bg-secondary' : '';
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
             itemDiv.innerHTML = `
-                <div>
+                <div class="flex-grow-1">
                     <h5 class="mb-1">${type} OKR</h5>
                     <small>Completed: ${metric.completed} / Total: ${metric.total}</small>
                     <div class="progress mt-2" style="height: 10px;">
-                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar ${progressColorCompleted}" role="progressbar" style="width: ${completedWidth}%" aria-valuenow="${metric.completed}" aria-valuemin="0" aria-valuemax="${target}"></div>
+                        <div class="progress-bar ${progressColorTotal}" role="progressbar" style="width: ${totalButNotCompletedWidth}%" aria-valuenow="${metric.total - metric.completed}" aria-valuemin="0" aria-valuemax="${target}"></div>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
                     <span class="me-2">Target:</span>
-                    <input type="number" class="form-control okr-target-input" data-okr-type="${type}" value="${metric.target}" style="width: 80px;">
+                    <input type="number" class="form-control okr-target-input" data-okr-type="${type}" value="${target}" style="width: 80px;">
                 </div>
             `;
             okrMetricsDiv.appendChild(itemDiv);
@@ -722,6 +765,79 @@ async function renderOKRs(tasks) {
     } finally {
         hideLoading();
     }
+}
+
+function computeRollup(tasks, accounts, key) {
+    const summary = {};
+    const accountMap = {};
+    accounts.forEach(acc => {
+        accountMap[acc.id] = acc;
+    });
+    tasks.forEach(task => {
+        if (!OKR_TYPES.includes(task.type)) return;
+        let group = 'Unassigned';
+        if (task.accountId && accountMap[task.accountId]) {
+            group = accountMap[task.accountId][key] || 'Unassigned';
+        }
+        if (!summary[group]) {
+            summary[group] = {};
+            OKR_TYPES.forEach(t => {
+                summary[group][t] = { completed: 0, total: 0 };
+            });
+        }
+        summary[group][task.type].total++;
+        if (task.completed) summary[group][task.type].completed++;
+    });
+    return summary;
+}
+
+function renderRollup(summary, containerId, okrTargets) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    Object.keys(summary).sort().forEach(group => {
+        const metrics = summary[group];
+        const card = document.createElement('div');
+        card.className = 'card mb-3';
+        const body = document.createElement('div');
+        body.className = 'card-body';
+        const title = document.createElement('h5');
+        title.className = 'card-title';
+        title.textContent = group;
+        body.appendChild(title);
+        OKR_TYPES.forEach(type => {
+            const metric = metrics[type];
+            const target = okrTargets[type] !== undefined ? okrTargets[type] : 0;
+            const percentage = target > 0 ? (metric.completed / target) * 100 : 0;
+            const progressColor = percentage === 100 ? 'bg-success' : (percentage > 50 ? 'bg-warning' : 'bg-danger');
+            const item = document.createElement('div');
+            item.className = 'mb-2';
+            item.innerHTML = `
+                <strong>${type}</strong>
+                <small class="ms-2">${metric.completed}/${target}</small>
+                <div class="progress mt-1" style="height: 8px;">
+                    <div class="progress-bar ${progressColor}" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="${target}"></div>
+                </div>`;
+            body.appendChild(item);
+        });
+        card.appendChild(body);
+        container.appendChild(card);
+    });
+}
+
+async function renderVerticalRollup() {
+    const tasks = await fetchTasks();
+    const accounts = await fetchAccounts();
+    const okrTargets = await getOKRTargets();
+    const summary = computeRollup(tasks, accounts, 'vertical');
+    renderRollup(summary, 'vertical-summary', okrTargets);
+}
+
+async function renderSubVerticalRollup() {
+    const tasks = await fetchTasks();
+    const accounts = await fetchAccounts();
+    const okrTargets = await getOKRTargets();
+    const summary = computeRollup(tasks, accounts, 'subVertical');
+    renderRollup(summary, 'sub-vertical-summary', okrTargets);
 }
 
 function setActiveNav(navId) {
@@ -1246,6 +1362,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setActiveNav('nav-okr');
         document.getElementById('dashboard').classList.add('d-none');
         document.getElementById('accounts').classList.add('d-none');
+        document.getElementById('vertical').classList.add('d-none');
+        document.getElementById('sub-vertical').classList.add('d-none');
         document.getElementById('okr').classList.remove('d-none');
         
         // Optionally, focus the task input for better UX
@@ -1308,9 +1426,37 @@ if (navOkr) {
         setActiveNav('nav-okr');
         document.getElementById('dashboard').classList.add('d-none');
         document.getElementById('accounts').classList.add('d-none');
+        document.getElementById('vertical').classList.add('d-none');
+        document.getElementById('sub-vertical').classList.add('d-none');
         document.getElementById('okr').classList.remove('d-none');
         const tasks = await fetchTasks(); // Ensure fresh tasks for OKRs
         await renderOKRs(tasks);
+    });
+}
+
+const navVertical = document.getElementById('nav-vertical');
+if (navVertical) {
+    navVertical.addEventListener('click', async () => {
+        setActiveNav('nav-vertical');
+        document.getElementById('dashboard').classList.add('d-none');
+        document.getElementById('accounts').classList.add('d-none');
+        document.getElementById('okr').classList.add('d-none');
+        document.getElementById('sub-vertical').classList.add('d-none');
+        document.getElementById('vertical').classList.remove('d-none');
+        await renderVerticalRollup();
+    });
+}
+
+const navSubVertical = document.getElementById('nav-sub-vertical');
+if (navSubVertical) {
+    navSubVertical.addEventListener('click', async () => {
+        setActiveNav('nav-sub-vertical');
+        document.getElementById('dashboard').classList.add('d-none');
+        document.getElementById('accounts').classList.add('d-none');
+        document.getElementById('okr').classList.add('d-none');
+        document.getElementById('vertical').classList.add('d-none');
+        document.getElementById('sub-vertical').classList.remove('d-none');
+        await renderSubVerticalRollup();
     });
 }
 
@@ -1520,4 +1666,10 @@ async function refreshAccountList() {
         (account.renewalDate && account.renewalDate.toLowerCase().includes(searchTerm))
     );
     renderAccounts(filteredAccounts);
+    if (!document.getElementById('vertical').classList.contains('d-none')) {
+        await renderVerticalRollup();
+    }
+    if (!document.getElementById('sub-vertical').classList.contains('d-none')) {
+        await renderSubVerticalRollup();
+    }
 }
