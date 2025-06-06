@@ -18,41 +18,69 @@ const VERTICALS = {
     'Commercial': ['SMB', 'Mid-Market', 'Enterprise']
 };
 
-// Initialize database
-let db = null;
-
-// Global DB initialization promise
+// Global DB initialization promise - This will manage the single active DB connection promise
 let dbInitPromise = null;
 
+// Function to open IndexedDB and handle upgrades
 function initDB() {
+    console.log('initDB: Opening IndexedDB connection...');
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-        request.onerror = () => {
-            reject(new Error('Failed to open database'));
+        request.onerror = (event) => {
+            console.error('initDB: Failed to open database', event.target.error);
+            reject(new Error(`Failed to open database: ${event.target.error.message}`));
         };
 
         request.onsuccess = (event) => {
-            db = event.target.result;
-            resolve(db);
+            const database = event.target.result;
+            console.log('initDB: Database opened successfully.', database);
+            // Ensure database is closed when current window/tab is closed
+            database.onversionchange = () => {
+                database.close();
+                console.log('Database connection closed due to version change.');
+                // Invalidate the promise so a new connection is established next time
+                dbInitPromise = null;
+            };
+            resolve(database);
         };
 
         request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            const database = event.target.result;
+            console.log('initDB: Upgrade needed. Old version:', event.oldVersion, 'New version:', event.newVersion);
+            
+            if (!database.objectStoreNames.contains(STORE_NAME)) {
+                console.log('initDB: Creating tasks object store.');
+                const store = database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
                 store.createIndex('type', 'type', { unique: false });
                 store.createIndex('due', 'due', { unique: false });
             }
-            if (!db.objectStoreNames.contains(ACCOUNT_STORE)) {
-                const store = db.createObjectStore(ACCOUNT_STORE, { keyPath: 'id', autoIncrement: true });
+            if (!database.objectStoreNames.contains(ACCOUNT_STORE)) {
+                console.log('initDB: Creating accounts object store.');
+                const store = database.createObjectStore(ACCOUNT_STORE, { keyPath: 'id', autoIncrement: true });
                 store.createIndex('health', 'health', { unique: false });
             }
-            if (!db.objectStoreNames.contains(OKR_STORE_NAME)) {
-                db.createObjectStore(OKR_STORE_NAME, { keyPath: 'type' });
+            if (!database.objectStoreNames.contains(OKR_STORE_NAME)) {
+                console.log('initDB: Creating OKR object store.');
+                database.createObjectStore(OKR_STORE_NAME, { keyPath: 'type' });
             }
         };
     });
+}
+
+// Ensure database connection is initialized and available
+async function ensureDBInitialized() {
+    if (!dbInitPromise) {
+        console.log('ensureDBInitialized: dbInitPromise is null, initializing DB connection.');
+        dbInitPromise = initDB().catch(error => {
+            console.error('ensureDBInitialized: DB initialization failed:', error);
+            dbInitPromise = null; // Reset promise on failure
+            throw error;
+        });
+    } else {
+        console.log('ensureDBInitialized: Using existing dbInitPromise.');
+    }
+    return await dbInitPromise; // Always await the promise to get the resolved DB instance
 }
 
 // Add loading and error state management
@@ -72,39 +100,29 @@ const showError = (message) => {
     setTimeout(() => errorDiv.classList.add('d-none'), 5000);
 };
 
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-}
-
-function ensureDBInitialized() {
-    if (!dbInitPromise) {
-        dbInitPromise = initDB();
-    }
-    return dbInitPromise;
-}
-
+// --- Task Management Functions ---
 async function fetchTasks() {
-    if (isLoading) return;
-    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized(); // Get the freshest DB instance
+        console.log('fetchTasks: DB initialized. Performing transaction on:', database);
         const tasks = await new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const transaction = database.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.getAll();
 
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to fetch tasks'));
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+            request.onerror = (event) => reject(new Error(`Failed to fetch tasks: ${event.target.error.message}`));
         });
 
+        console.log('Fetched tasks count:', tasks.length);
         renderTasks(tasks);
         return tasks;
     } catch (err) {
         console.error('Failed to load tasks', err);
         showError(`Failed to load tasks: ${err.message}`);
         return [];
-    } finally {
-        hideLoading();
     }
 }
 
@@ -144,22 +162,30 @@ function renderTasks(tasks) {
         list.appendChild(li);
     });
 
-    // Add event listeners for edit and delete buttons
+    // Add event listeners for edit and delete buttons (delegated for dynamic content)
     list.querySelectorAll('.edit-task').forEach(button => {
         button.addEventListener('click', async (e) => {
             const taskId = e.currentTarget.dataset.id;
-            const task = tasks.find(t => t.id === Number(taskId));
-            if (task) {
-                document.getElementById('edit-task-id').value = task.id;
-                document.getElementById('edit-task-name').value = task.name;
-                document.getElementById('edit-task-type').value = task.type;
-                document.getElementById('edit-task-account').value = task.accountId || '';
-                document.getElementById('edit-task-due').value = task.due || '';
-                document.getElementById('edit-task-completed').checked = task.completed;
-                
-                const modal = new bootstrap.Modal(document.getElementById('task-modal'));
-                modal.show();
-            }
+            const database = await ensureDBInitialized();
+            const transaction = database.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(Number(taskId));
+
+            request.onsuccess = () => {
+                const task = request.result;
+                if (task) {
+                    document.getElementById('edit-task-id').value = task.id;
+                    document.getElementById('edit-task-name').value = task.name;
+                    document.getElementById('edit-task-type').value = task.type;
+                    document.getElementById('edit-task-account').value = task.accountId || '';
+                    document.getElementById('edit-task-due').value = task.due || '';
+                    document.getElementById('edit-task-completed').checked = task.completed;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('task-modal'));
+                    modal.show();
+                }
+            };
+            request.onerror = (event) => console.error('Failed to get task for edit:', event.target.error);
         });
     });
 
@@ -175,43 +201,51 @@ function renderTasks(tasks) {
     list.querySelectorAll('.complete-task').forEach(checkbox => {
         checkbox.addEventListener('change', async (e) => {
             const taskId = e.currentTarget.dataset.id;
-            const task = tasks.find(t => t.id === Number(taskId));
-            if (task) {
-                await updateTask(
-                    task.id,
-                    task.name,
-                    task.type,
-                    task.due,
-                    e.currentTarget.checked,
-                    task.accountId
-                );
-            }
+            const database = await ensureDBInitialized();
+            const transaction = database.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(Number(taskId));
+            request.onsuccess = async () => {
+                const task = request.result;
+                if (task) {
+                    await updateTask(
+                        task.id,
+                        task.name,
+                        task.type,
+                        task.due,
+                        e.currentTarget.checked,
+                        task.accountId
+                    );
+                }
+            };
+            request.onerror = (event) => console.error('Failed to get task for completion toggle:', event.target.error);
         });
     });
 }
 
 async function addTask(name, type, due, accountId) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
         let accountName = '';
         if (accountId) {
             const account = await new Promise((resolve, reject) => {
-                const transaction = db.transaction([ACCOUNT_STORE], 'readonly');
+                const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
                 const store = transaction.objectStore(ACCOUNT_STORE);
                 const request = store.get(Number(accountId));
                 request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(new Error('Failed to fetch account'));
+                request.onerror = (event) => reject(new Error(`Failed to fetch account for task: ${event.target.error.message}`));
             });
             accountName = account ? account.name : '';
         }
         const task = { name, type, due, completed: false, accountId: accountId ? Number(accountId) : null, accountName };
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const transaction = database.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.add(task);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to add task'));
+            request.onerror = (event) => reject(new Error(`Failed to add task: ${event.target.error.message}`));
         });
 
         await refreshTaskList();
@@ -221,20 +255,23 @@ async function addTask(name, type, due, accountId) {
     } catch (err) {
         console.error('Failed to add task', err);
         showError(`Failed to add task: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
 async function updateTask(id, name, type, due, completed, accountId) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
         let accountName = '';
         if (accountId) {
             const account = await new Promise((resolve, reject) => {
-                const transaction = db.transaction([ACCOUNT_STORE], 'readonly');
+                const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
                 const store = transaction.objectStore(ACCOUNT_STORE);
                 const request = store.get(Number(accountId));
                 request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(new Error('Failed to fetch account'));
+                request.onerror = (event) => reject(new Error(`Failed to fetch account for task update: ${event.target.error.message}`));
             });
             accountName = account ? account.name : '';
         }
@@ -248,12 +285,12 @@ async function updateTask(id, name, type, due, completed, accountId) {
             accountName 
         };
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const transaction = database.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.put(task);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to update task'));
+            request.onerror = (event) => reject(new Error(`Failed to update task: ${event.target.error.message}`));
         });
 
         await refreshTaskList();
@@ -263,19 +300,22 @@ async function updateTask(id, name, type, due, completed, accountId) {
     } catch (err) {
         console.error('Failed to update task', err);
         showError(`Failed to update task: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
 async function deleteTask(id) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const transaction = database.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.delete(id);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to delete task'));
+            request.onerror = (event) => reject(new Error(`Failed to delete task: ${event.target.error.message}`));
         });
 
         await refreshTaskList();
@@ -285,27 +325,64 @@ async function deleteTask(id) {
     } catch (err) {
         console.error('Failed to delete task', err);
         showError(`Failed to delete task: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
+// --- Account Management Functions ---
 async function fetchAccounts() {
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
+        console.log('fetchAccounts: DB initialized. Performing transaction on:', database);
         const accounts = await new Promise((resolve, reject) => {
-            const transaction = db.transaction([ACCOUNT_STORE], 'readonly');
+            const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
             const store = transaction.objectStore(ACCOUNT_STORE);
             const request = store.getAll();
 
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to fetch accounts'));
+            request.onsuccess = () => {
+                resolve(request.result);
+            };
+            request.onerror = (event) => reject(new Error(`Failed to fetch accounts: ${event.target.error.message}`));
         });
 
+        console.log('Fetched accounts count:', accounts.length);
         renderAccounts(accounts);
+        await populateAccountDropdown(accounts); // Ensure dropdown is always populated after fetching
         return accounts;
     } catch (err) {
         console.error('Failed to load accounts', err);
         showError(`Failed to load accounts: ${err.message}`);
         return [];
+    }
+}
+
+async function searchAccounts() {
+    const searchTerm = document.getElementById('search-account-input').value.toLowerCase();
+    showLoading();
+    try {
+        const database = await ensureDBInitialized();
+        const accounts = await new Promise((resolve, reject) => {
+            const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
+            const store = transaction.objectStore(ACCOUNT_STORE);
+            const request = store.getAll();
+
+            request.onsuccess = () => {
+                const filteredAccounts = request.result.filter(account =>
+                    account.name.toLowerCase().includes(searchTerm) ||
+                    (account.vertical && account.vertical.toLowerCase().includes(searchTerm)) ||
+                    (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm))
+                );
+                renderAccounts(filteredAccounts);
+                resolve(filteredAccounts);
+            };
+            request.onerror = (event) => reject(new Error(`Failed to search accounts: ${event.target.error.message}`));
+        });
+    } catch (err) {
+        console.error('Error searching accounts:', err);
+        showError(`Failed to search accounts: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
@@ -325,6 +402,15 @@ function populateSubVertical(selectId, vertical) {
 function renderAccounts(accts) {
     const list = document.getElementById('account-list');
     list.innerHTML = '';
+    
+    if (accts.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'text-center text-muted py-4';
+        emptyState.innerHTML = 'No accounts found';
+        list.appendChild(emptyState);
+        return;
+    }
+
     accts.forEach(acc => {
         const li = document.createElement('div');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -371,19 +457,47 @@ function renderAccounts(accts) {
         li.appendChild(btnGroup);
         list.appendChild(li);
     });
+
+    // Add event listeners for edit and delete buttons
+    list.querySelectorAll('.edit-account').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const accountId = e.currentTarget.dataset.id;
+            const database = await ensureDBInitialized();
+            const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
+            const store = transaction.objectStore(ACCOUNT_STORE);
+            const request = store.get(Number(accountId));
+
+            request.onsuccess = () => {
+                const account = request.result;
+                if (account) {
+                    document.getElementById('edit-account-id').value = account.id;
+                    document.getElementById('edit-account-name').value = account.name;
+                    document.getElementById('edit-account-arr').value = account.arr || '';
+                    document.getElementById('edit-account-vertical').value = account.vertical || '';
+                    populateSubVertical('edit-account-sub-vertical', account.vertical || '');
+                    document.getElementById('edit-account-sub-vertical').value = account.subVertical || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('account-modal'));
+                    modal.show();
+                }
+            };
+            request.onerror = (event) => console.error('Failed to get account for edit:', event.target.error);
+        });
+    });
 }
 
 async function addAccount(name, vertical, subVertical, arr) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
         const account = { name, vertical, subVertical, arr };
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([ACCOUNT_STORE], 'readwrite');
+            const transaction = database.transaction([ACCOUNT_STORE], 'readwrite');
             const store = transaction.objectStore(ACCOUNT_STORE);
             const request = store.add(account);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to add account'));
+            request.onerror = (event) => reject(new Error(`Failed to add account: ${event.target.error.message}`));
         });
 
         await fetchAccounts();
@@ -391,20 +505,23 @@ async function addAccount(name, vertical, subVertical, arr) {
     } catch (err) {
         console.error('Failed to add account', err);
         showError(`Failed to add account: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
 async function updateAccount(id, name, vertical, subVertical, arr) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        const database = await ensureDBInitialized();
         const account = { id: Number(id), name, vertical, subVertical, arr };
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([ACCOUNT_STORE], 'readwrite');
+            const transaction = database.transaction([ACCOUNT_STORE], 'readwrite');
             const store = transaction.objectStore(ACCOUNT_STORE);
             const request = store.put(account);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to update account'));
+            request.onerror = (event) => reject(new Error(`Failed to update account: ${event.target.error.message}`));
         });
 
         await fetchAccounts();
@@ -412,151 +529,732 @@ async function updateAccount(id, name, vertical, subVertical, arr) {
     } catch (err) {
         console.error('Failed to update account', err);
         showError(`Failed to update account: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
 async function deleteAccount(id) {
+    showLoading();
     try {
-        await ensureDBInitialized();
+        console.log('deleteAccount: Attempting to delete account with ID:', id, 'Type:', typeof id);
+        const database = await ensureDBInitialized();
         await new Promise((resolve, reject) => {
-            const transaction = db.transaction([ACCOUNT_STORE], 'readwrite');
+            const transaction = database.transaction([ACCOUNT_STORE], 'readwrite');
             const store = transaction.objectStore(ACCOUNT_STORE);
             const request = store.delete(id);
 
             request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(new Error('Failed to delete account'));
+            request.onerror = (event) => reject(new Error(`Failed to delete account: ${event.target.error.message}`));
         });
 
-        await fetchAccounts();
-        await populateAccountDropdown();
+        // Explicitly close DB and invalidate promise after write operation
+        database.close();
+        dbInitPromise = null;
+
+        // Introduce a small delay to allow IndexedDB to fully synchronize
+        setTimeout(async () => {
+            await fetchAccounts();
+            await populateAccountDropdown();
+        }, 100);
     } catch (err) {
         console.error('Failed to delete account', err);
         showError(`Failed to delete account: ${err.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
+// --- OKR Management Functions ---
 const OKR_TYPES = ['Risk', 'Upsell', 'Story', 'EBC'];
-const OKR_TARGETS_KEY = 'okr_targets';
+const OKR_TARGETS_KEY = 'okr_targets'; // Key is not used if IndexedDB is the primary storage
 
 async function getOKRTargets() {
-    await ensureDBInitialized();
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([OKR_STORE_NAME], 'readonly');
-        const store = transaction.objectStore(OKR_STORE_NAME);
-        const request = store.getAll();
+    showLoading();
+    try {
+        const database = await ensureDBInitialized();
+        return new Promise((resolve, reject) => {
+            const transaction = database.transaction([OKR_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(OKR_STORE_NAME);
+            const request = store.getAll();
 
-        request.onsuccess = () => {
-            const targetsArray = request.result;
-            const targets = {};
-            targetsArray.forEach(item => {
-                targets[item.type] = item.target;
-            });
-            resolve(targets);
-        };
-        request.onerror = () => reject(new Error('Failed to fetch OKR targets'));
-    });
+            request.onsuccess = () => {
+                const targetsArray = request.result;
+                const targets = {};
+                targetsArray.forEach(item => {
+                    targets[item.type] = item.target;
+                });
+                resolve(targets);
+            };
+            request.onerror = (event) => reject(new Error(`Failed to fetch OKR targets: ${event.target.error.message}`));
+        });
+    } catch (err) {
+        console.error('Failed to get OKR targets', err);
+        showError(`Failed to get OKR targets: ${err.message}`);
+        return {};
+    } finally {
+        hideLoading();
+    }
 }
 
 async function saveOKRTargets(targets) {
-    await ensureDBInitialized();
-    return new Promise(async (resolve, reject) => {
-        const transaction = db.transaction([OKR_STORE_NAME], 'readwrite');
+    showLoading();
+    try {
+        const database = await ensureDBInitialized();
+        // Use a transaction to save all targets
+        const transaction = database.transaction([OKR_STORE_NAME], 'readwrite');
         const store = transaction.objectStore(OKR_STORE_NAME);
-        try {
-            // Clear existing targets before adding new ones
-            await new Promise((res, rej) => {
-                const clearRequest = store.clear();
-                clearRequest.onsuccess = () => res();
-                clearRequest.onerror = () => rej(new Error('Failed to clear OKR targets'));
-            });
-            for (const type in targets) {
-                if (targets.hasOwnProperty(type)) {
-                    await new Promise((res, rej) => {
-                        const putRequest = store.put({ type, target: targets[type] });
-                        putRequest.onsuccess = () => res();
-                        putRequest.onerror = () => rej(new Error(`Failed to save OKR target for ${type}`));
-                    });
-                }
-            }
-            resolve();
-        } catch (err) {
-            reject(err);
+        
+        const promises = [];
+        for (const type of OKR_TYPES) {
+            const targetValue = targets[type] !== undefined ? targets[type] : 4; // Default to 4 if not set
+            promises.push(new Promise((resolve, reject) => {
+                const request = store.put({ type: type, target: targetValue });
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(new Error(`Failed to save OKR target for ${type}: ${event.target.error.message}`));
+            }));
         }
-    });
+        await Promise.all(promises); // Wait for all put operations to complete within the transaction
+
+        await transaction.done; // Ensure the transaction itself completes
+        return true; // Indicate success
+    } catch (err) {
+        console.error('Failed to save OKR targets', err);
+        showError(`Failed to save OKR targets: ${err.message}`);
+        return false;
+    } finally {
+        hideLoading();
+    }
 }
 
 async function renderOKRs(tasks) {
-    const metrics = {};
-    const completedMetrics = {};
-    const uncompletedMetrics = {};
-    OKR_TYPES.forEach(type => {
-        metrics[type] = 0;
-        completedMetrics[type] = 0;
-        uncompletedMetrics[type] = 0;
-    });
-    tasks.forEach(t => {
-        metrics[t.type] = (metrics[t.type] || 0) + 1;
-        if (t.completed) completedMetrics[t.type] = (completedMetrics[t.type] || 0) + 1;
-        else uncompletedMetrics[t.type] = (uncompletedMetrics[t.type] || 0) + 1;
-    });
-    const targets = await getOKRTargets();
-    const list = document.getElementById('okr-metrics');
-    list.innerHTML = '';
-    OKR_TYPES.forEach(type => {
-        const completed = completedMetrics[type] || 0;
-        const uncompleted = uncompletedMetrics[type] || 0;
-        const target = targets[type] || 1;
-        const total = Math.min(target, completed + uncompleted);
-        const completedForBar = Math.min(completed, target);
-        const incompleteForBar = Math.min(uncompleted, target - completedForBar);
-        const completedPercent = Math.round((completedForBar / target) * 100);
-        const incompletePercent = Math.round((incompleteForBar / target) * 100);
-        const item = document.createElement('div');
-        item.className = 'list-group-item';
-        item.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between flex-wrap">
-                <div class="fw-bold" style="min-width:120px;">${type}</div>
-                <div class="flex-grow-1 mx-3">
-                    <div class="d-flex align-items-center">
-                        <div class="progress flex-grow-1 me-3" style="height: 24px; min-width:120px;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: ${completedPercent}%;" aria-valuenow="${completedForBar}" aria-valuemin="0" aria-valuemax="${target}"></div>
-                            <div class="progress-bar" role="progressbar" style="width: ${incompletePercent}%; background-color: #ffe066;" aria-valuenow="${incompleteForBar}" aria-valuemin="0" aria-valuemax="${target}"></div>
-                        </div>
-                        <span class="ms-2 fw-semibold">${completed} / ${target}</span>
+    const okrSection = document.getElementById('okr');
+    if (okrSection.classList.contains('d-none')) {
+        return; // Only render if OKR section is visible
+    }
+
+    try {
+        const okrMetricsDiv = document.getElementById('okr-metrics');
+        okrMetricsDiv.innerHTML = ''; // Clear previous metrics
+
+        const okrTargets = await getOKRTargets();
+        console.log('Current OKR Targets for rendering:', okrTargets); // Debugging
+
+        const okrSummary = {
+            'Risk': { completed: 0, total: 0, target: okrTargets['Risk'] || 4 },
+            'Upsell': { completed: 0, total: 0, target: okrTargets['Upsell'] || 4 },
+            'Story': { completed: 0, total: 0, target: okrTargets['Story'] || 4 },
+            'EBC': { completed: 0, total: 0, target: okrTargets['EBC'] || 4 }
+        };
+
+        tasks.forEach(task => {
+            if (OKR_TYPES.includes(task.type)) {
+                okrSummary[task.type].total++;
+                if (task.completed) {
+                    okrSummary[task.type].completed++;
+                }
+            }
+        });
+
+        OKR_TYPES.forEach(type => {
+            const metric = okrSummary[type];
+            const percentage = metric.total > 0 ? (metric.completed / metric.total) * 100 : 0;
+            const progressColor = percentage === 100 ? 'bg-success' : (percentage > 50 ? 'bg-warning' : 'bg-danger');
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
+            itemDiv.innerHTML = `
+                <div>
+                    <h5 class="mb-1">${type} OKR</h5>
+                    <small>Completed: ${metric.completed} / Total: ${metric.total}</small>
+                    <div class="progress mt-2" style="height: 10px;">
+                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
-                <div class="ms-2">
-                    <input type="number" min="1" class="form-control form-control-sm okr-target-input" data-okr-type="${type}" value="${target}" style="width:70px;display:inline-block;">
+                <div class="d-flex align-items-center">
+                    <span class="me-2">Target:</span>
+                    <input type="number" class="form-control okr-target-input" data-okr-type="${type}" value="${metric.target}" style="width: 80px;">
                 </div>
-            </div>
-        `;
-        list.appendChild(item);
-    });
-}
+            `;
+            okrMetricsDiv.appendChild(itemDiv);
+        });
 
-const okrForm = document.getElementById('okr-targets-form');
-if (okrForm) {
-    okrForm.addEventListener('input', async function(e) {
-        if (e.target.classList.contains('okr-target-input')) {
-            const type = e.target.getAttribute('data-okr-type');
-            let value = parseInt(e.target.value, 10);
-            if (isNaN(value) || value < 1) value = 1;
-            const targets = await getOKRTargets();
-            targets[type] = value;
-            await saveOKRTargets(targets);
-            // Re-render with updated targets
-            await renderOKRs(await fetchTasks());
-        }
-    });
+        // Add event listener for OKR target changes
+        okrMetricsDiv.querySelectorAll('.okr-target-input').forEach(input => {
+            input.addEventListener('change', async (e) => {
+                const type = e.target.dataset.okrType;
+                const newTarget = Number(e.target.value);
+                if (!isNaN(newTarget) && newTarget >= 0) {
+                    okrTargets[type] = newTarget; // Update the in-memory targets
+                    await saveOKRTargets(okrTargets); // Persist the new target
+                    await renderOKRs(tasks); // Re-render OKRs with updated targets
+                } else {
+                    showError('Invalid OKR target value. Please enter a non-negative number.');
+                    e.target.value = okrTargets[type] || 4; // Revert to old value or default
+                }
+            });
+        });
+
+    } catch (err) {
+        console.error('Error rendering OKRs:', err);
+        showError(`Failed to render OKRs: ${err.message}`);
+    } finally {
+        hideLoading();
+    }
 }
 
 function setActiveNav(navId) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
-    document.getElementById(navId).classList.add('active');
+    document.getElementById(navId)?.classList.add('active');
 }
 
+async function refreshTaskList() {
+    console.log('refreshTaskList called');
+    const currentTasks = await fetchTasks(); // fetchTasks now gets a fresh connection
+    console.log('refreshTaskList: currentTasks after fetchTasks()', currentTasks);
+    if (!currentTasks) {
+        console.warn('refreshTaskList: currentTasks is undefined or null, cannot filter.');
+        renderTasks([]); // Render an empty list or handle appropriately
+        return;
+    }
+    const filteredTasks = currentTasks.filter(task => {
+        return task.name.toLowerCase().includes(searchQuery) ||
+               (task.accountName && task.accountName.toLowerCase().includes(searchQuery));
+    });
+    renderTasks(filteredTasks);
+}
+
+// --- MIGRATION: Ensure all tasks have a completed property and numeric IDs ---
+async function migrateTasksForCompletedAndNumericId() {
+    const database = await ensureDBInitialized();
+    const tasks = await new Promise((resolve, reject) => {
+        const transaction = database.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (event) => reject(new Error(`Failed to fetch tasks for migration: ${event.target.error.message}`));
+    });
+    const updates = tasks.filter(t => typeof t.completed === 'undefined' || typeof t.id !== 'number');
+    if (updates.length > 0) {
+        const transaction = database.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const promises = updates.map(task => {
+            return new Promise((resolve, reject) => {
+                if (typeof task.completed === 'undefined') task.completed = false;
+                if (typeof task.id !== 'number') task.id = Number(task.id);
+                const request = store.put(task);
+                request.onsuccess = () => resolve();
+                request.onerror = (event) => reject(new Error(`Failed to migrate task ${task.id}: ${event.target.error.message}`));
+            });
+        });
+        await Promise.all(promises);
+        await transaction.done;
+    }
+}
+
+async function populateAccountDropdown(accounts) {
+    try {
+        // Ensure accounts are fetched if not provided
+        const accountsToUse = accounts || await fetchAccounts();
+
+        const accountSelect = document.getElementById('task-account');
+        const editAccountSelect = document.getElementById('edit-task-account');
+        
+        const options = accountsToUse.map(acc => {
+            const opt = document.createElement('option');
+            opt.value = acc.id;
+            opt.textContent = acc.name;
+            return opt;
+        });
+
+        if (accountSelect) {
+            accountSelect.innerHTML = '<option value="">Select Account</option>';
+            options.forEach(opt => accountSelect.appendChild(opt.cloneNode(true)));
+        }
+
+        if (editAccountSelect) {
+            editAccountSelect.innerHTML = '<option value="">Select Account</option>';
+            options.forEach(opt => editAccountSelect.appendChild(opt.cloneNode(true)));
+        }
+    } catch (err) {
+        console.error('Failed to populate account dropdown', err);
+    }
+}
+
+async function exportTasksToCsv() {
+    showLoading();
+    try {
+        const database = await ensureDBInitialized();
+        const tasks = await new Promise((resolve, reject) => {
+            const transaction = database.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(new Error(`Failed to fetch tasks for export: ${event.target.error.message}`));
+        });
+
+        if (tasks.length === 0) {
+            showError('No tasks to export.');
+            return;
+        }
+
+        const headers = ['ID', 'Name', 'Type', 'Account ID', 'Account Name', 'Due Date', 'Completed'];
+        const csvRows = [headers.join(',')];
+
+        tasks.forEach(task => {
+            const row = [
+                task.id,
+                `"${task.name.replace(/"/g, '""')}"`,
+                task.type,
+                task.accountId || '',
+                `"${(task.accountName || '').replace(/"/g, '""')}"`,
+                task.due || '',
+                task.completed ? 'TRUE' : 'FALSE'
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'tasks_export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        showError('Tasks exported successfully!');
+    } catch (err) {
+        console.error('Error exporting tasks:', err);
+        showError(`Failed to export tasks: ${err.message}`);
+    } finally {
+        hideLoading();
+    }
+}
+
+async function exportAccountsToCsv() {
+    showLoading();
+    try {
+        const database = await ensureDBInitialized();
+        const accounts = await new Promise((resolve, reject) => {
+            const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
+            const store = transaction.objectStore(ACCOUNT_STORE);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(new Error(`Failed to fetch accounts for export: ${event.target.error.message}`));
+        });
+
+        if (accounts.length === 0) {
+            showError('No accounts to export.');
+            return;
+        }
+
+        const headers = ['ID', 'Name', 'ARR', 'Vertical', 'Sub-Vertical'];
+        const csvRows = [headers.join(',')];
+
+        accounts.forEach(account => {
+            const row = [
+                account.id,
+                `"${account.name.replace(/"/g, '""')}"`,
+                account.arr || '',
+                account.vertical || '',
+                account.subVertical || ''
+            ];
+            csvRows.push(row.join(','));
+        });
+
+        const csvString = csvRows.join('\n');
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'accounts_export.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        showError('Accounts exported successfully!');
+    } catch (err) {
+        console.error('Error exporting accounts:', err);
+        showError(`Failed to export accounts: ${err.message}`);
+    } finally {
+        hideLoading();
+    }
+}
+
+async function importTasksFromCsv(file) {
+    showLoading();
+    try {
+        const database = await ensureDBInitialized(); // Ensure DB is initialized before starting transaction
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+
+                if (lines.length === 0) {
+                    showError('CSV file is empty or invalid.');
+                    return;
+                }
+
+                const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
+                const expectedHeaders = ['id', 'name', 'type', 'account id', 'account name', 'due date', 'completed'];
+
+                // Basic header validation (check if all expected headers are present, ignoring order and case)
+                const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+                if (missingHeaders.length > 0) {
+                    showError(`Missing expected CSV headers: ${missingHeaders.join(', ')}. Please ensure the CSV has columns for ID, Name, Type, Account ID, Account Name, Due Date, and Completed.`);
+                    return;
+                }
+                
+                const tasksToImport = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Split by comma, but not within double quotes
+                    if (values.length !== headers.length) {
+                        console.warn(`Skipping malformed row: ${lines[i]}`);
+                        continue; // Skip malformed rows
+                    }
+
+                    const task = {};
+                    headers.forEach((header, index) => {
+                        let value = values[index].trim();
+                        // Remove quotes from quoted fields
+                        if (value.startsWith('"') && value.endsWith('"')) {
+                            value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                        }
+                        
+                        switch (header) {
+                            case 'id':
+                                task.id = value ? Number(value) : undefined; // Allow IndexedDB to auto-increment if ID is empty
+                                break;
+                            case 'name':
+                                task.name = value;
+                                break;
+                            case 'type':
+                                task.type = value;
+                                break;
+                            case 'account id':
+                                task.accountId = value ? Number(value) : null;
+                                break;
+                            case 'account name':
+                                task.accountName = value;
+                                break;
+                            case 'due date':
+                                task.due = value;
+                                break;
+                            case 'completed':
+                                task.completed = value.toLowerCase() === 'true';
+                                break;
+                            default:
+                                // Ignore unknown headers
+                                break;
+                        }
+                    });
+                    
+                    // Ensure required fields are present
+                    if (task.name && task.type) {
+                        tasksToImport.push(task);
+                    } else {
+                        console.warn(`Skipping task due to missing required fields (name or type): ${JSON.stringify(task)}`);
+                    }
+                }
+
+                if (tasksToImport.length === 0) {
+                    showError('No valid tasks found in CSV for import.');
+                    return;
+                }
+
+                const transaction = database.transaction([STORE_NAME], 'readwrite'); // Use the fresh DB instance
+                const store = transaction.objectStore(STORE_NAME);
+                
+                let importSuccessCount = 0;
+                let importErrorCount = 0;
+
+                for (const task of tasksToImport) {
+                    try {
+                        if (task.id) {
+                            await new Promise((resolve, reject) => {
+                                const request = store.put(task);
+                                request.onsuccess = () => {
+                                    console.log('Task put successfully:', task.id || task.name);
+                                    resolve();
+                                };
+                                request.onerror = (event) => {
+                                    console.error('Failed to put task:', task.id || task.name, event.target.error);
+                                    reject(new Error(`Failed to put task with ID ${task.id}: ${event.target.error.message}`));
+                                };
+                            });
+                        } else {
+                            await new Promise((resolve, reject) => {
+                                const taskWithoutId = { ...task };
+                                delete taskWithoutId.id; // Remove ID to allow auto-increment
+                                const request = store.add(taskWithoutId);
+                                request.onsuccess = () => {
+                                    console.log('Task added successfully (auto-ID):', request.result);
+                                    resolve();
+                                };
+                                request.onerror = (event) => {
+                                    console.error('Failed to add task:', task.name, event.target.error);
+                                    reject(new Error(`Failed to add task: ${task.name}: ${event.target.error.message}`));
+                                };
+                            });
+                        }
+                        importSuccessCount++;
+                    } catch (err) {
+                        console.error(`Error importing task: ${err.message}`, task);
+                        importErrorCount++;
+                    }
+                }
+
+                // Wait for the transaction to complete before refreshing
+                await transaction.done;
+                database.close(); // Close the database connection to force fresh connection on next fetch
+                dbInitPromise = null; // Invalidate the promise to force a new connection
+
+                console.log('Import transaction completed for tasks. About to refresh list.');
+                showError(`Import complete: ${importSuccessCount} tasks added/updated, ${importErrorCount} failed.`);
+                
+                // Clear search and refresh to show all imported tasks
+                document.getElementById('search-input').value = '';
+                searchQuery = '';
+                
+                // Introduce a small delay to allow IndexedDB to fully synchronize
+                setTimeout(async () => {
+                    await refreshTaskList();
+                    if (!document.getElementById('okr').classList.contains('d-none')) {
+                        await renderOKRs(await fetchTasks());
+                    }
+                }, 100);
+            } catch (err) {
+                console.error('Error in importTasksFromCsv onload:', err);
+                showError(`Failed to import tasks: ${err.message}`);
+            } finally {
+                hideLoading();
+            }
+        };
+        reader.onerror = () => {
+            showError('Failed to read file.');
+            hideLoading();
+        };
+        reader.readAsText(file);
+
+    } catch (err) {
+        console.error('Error in importTasksFromCsv (outer):', err);
+        showError(`Failed to import tasks: ${err.message}`);
+        hideLoading();
+    }
+}
+
+async function importAccountsFromCsv(file) {
+    showLoading();
+    try {
+        const database = await ensureDBInitialized(); // Ensure DB is initialized before starting transaction
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const text = e.target.result;
+                const lines = text.split('\n').filter(line => line.trim() !== '');
+
+                if (lines.length === 0) {
+                    showError('CSV file is empty or invalid.');
+                    return;
+                }
+
+                const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
+                const expectedHeaders = ['id', 'name', 'arr', 'vertical', 'sub-vertical'];
+
+                const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+                if (missingHeaders.length > 0) {
+                    showError(`Missing expected CSV headers: ${missingHeaders.join(', ')}. Please ensure the CSV has columns for ID, Name, ARR, Vertical, and Sub-Vertical.`);
+                    return;
+                }
+                
+                const accountsToImport = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Split by comma, but not within double quotes
+                    if (values.length !== headers.length) {
+                        console.warn(`Skipping malformed row: ${lines[i]}`);
+                        continue;
+                    }
+
+                    const account = {};
+                    headers.forEach((header, index) => {
+                        let value = values[index].trim();
+                        if (value.startsWith('"') && value.endsWith('"')) {
+                            value = value.substring(1, value.length - 1).replace(/""/g, '"');
+                        }
+                        
+                        switch (header) {
+                            case 'id':
+                                account.id = value ? Number(value) : undefined;
+                                break;
+                            case 'name':
+                                account.name = value;
+                                break;
+                            case 'arr':
+                                account.arr = value ? Number(value) : null;
+                                break;
+                            case 'vertical':
+                                account.vertical = value;
+                                break;
+                            case 'sub-vertical':
+                                account.subVertical = value;
+                                break;
+                            default:
+                                break;
+                        }
+                    });
+
+                    // Ensure required fields are present (e.g., name)
+                    if (account.name) {
+                        accountsToImport.push(account);
+                    } else {
+                        console.warn(`Skipping account due to missing required fields (name): ${JSON.stringify(account)}`);
+                    }
+                }
+
+                if (accountsToImport.length === 0) {
+                    showError('No valid accounts found in CSV for import.');
+                    return;
+                }
+
+                const transaction = database.transaction([ACCOUNT_STORE], 'readwrite'); // Use the fresh DB instance
+                const store = transaction.objectStore(ACCOUNT_STORE);
+                
+                let importSuccessCount = 0;
+                let importErrorCount = 0;
+
+                for (const account of accountsToImport) {
+                    try {
+                        if (account.id) {
+                            await new Promise((resolve, reject) => {
+                                const request = store.put(account);
+                                request.onsuccess = () => {
+                                    console.log('Account put successfully:', account.id || account.name);
+                                    resolve();
+                                };
+                                request.onerror = (event) => {
+                                    console.error('Failed to put account:', account.id || account.name, event.target.error);
+                                    reject(new Error(`Failed to put account with ID ${account.id}: ${event.target.error.message}`));
+                                };
+                            });
+                        } else {
+                            await new Promise((resolve, reject) => {
+                                const accountWithoutId = { ...account };
+                                delete accountWithoutId.id;
+                                const request = store.add(accountWithoutId);
+                                request.onsuccess = () => {
+                                    console.log('Account added successfully (auto-ID):', request.result);
+                                    resolve();
+                                };
+                                request.onerror = (event) => {
+                                    console.error('Failed to add account:', account.name, event.target.error);
+                                    reject(new Error(`Failed to add account: ${account.name}: ${event.target.error.message}`));
+                                };
+                            });
+                        }
+                        importSuccessCount++;
+                    } catch (err) {
+                        console.error(`Error importing account: ${err.message}`, account);
+                        importErrorCount++;
+                    }
+                }
+
+                // Wait for the transaction to complete before refreshing
+                await transaction.done;
+                database.close(); // Close the database connection to force fresh connection on next fetch
+                dbInitPromise = null; // Invalidate the promise to force a new connection
+
+                console.log('Import transaction completed for accounts. About to refresh list.');
+                showError(`Import complete: ${importSuccessCount} accounts added/updated, ${importErrorCount} failed.`);
+                
+                // Clear search and refresh to show all imported accounts
+                document.getElementById('search-account-input').value = '';
+                
+                // Introduce a small delay to allow IndexedDB to fully synchronize
+                setTimeout(async () => {
+                    await refreshAccountList();
+                }, 100);
+            } catch (err) {
+                console.error('Error in importAccountsFromCsv onload:', err);
+                showError(`Failed to import accounts: ${err.message}`);
+            } finally {
+                hideLoading();
+            }
+        };
+        reader.onerror = () => {
+            showError('Failed to read file.');
+            hideLoading();
+        };
+        reader.readAsText(file);
+
+    } catch (err) {
+        console.error('Error in importAccountsFromCsv (outer):', err);
+        showError(`Failed to import accounts: ${err.message}`);
+        hideLoading();
+    }
+}
+
+// --- Event Listeners and Initial Load ---
+// Global variable for search query (tasks)
+let searchQuery = ''; 
+
+// Global variable for task filter (e.g., 'all', 'completed', 'pending')
+let filterType = 'all';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOMContentLoaded event fired - initializing CSM Dashboard');
+    try {
+        await ensureDBInitialized(); // Initial DB connection
+
+        // Perform migration if needed
+        await migrateTasksForCompletedAndNumericId();
+        
+        // Fetch and populate initial accounts dropdown (needs to happen before tasks are rendered if tasks depend on account names)
+        const initialAccounts = await fetchAccounts(); // Fetch accounts here
+        await populateAccountDropdown(initialAccounts); // Pass fetched accounts
+        
+        // Show OKR view by default
+        setActiveNav('nav-okr');
+        document.getElementById('dashboard').classList.add('d-none');
+        document.getElementById('accounts').classList.add('d-none');
+        document.getElementById('okr').classList.remove('d-none');
+        
+        // Optionally, focus the task input for better UX
+        const taskInput = document.getElementById('task-name');
+        if (taskInput) taskInput.focus();
+
+        // Ensure vertical/sub-vertical linkage for Add Account
+        const accountVertical = document.getElementById('account-vertical');
+        const accountSubVertical = document.getElementById('account-sub-vertical');
+        if (accountVertical && accountSubVertical) {
+            accountVertical.addEventListener('change', function() {
+                populateSubVertical('account-sub-vertical', this.value);
+            });
+        }
+        // Ensure vertical/sub-vertical linkage for Edit Account
+        const editAccountVertical = document.getElementById('edit-account-vertical');
+        const editAccountSubVertical = document.getElementById('edit-account-sub-vertical');
+        if (editAccountVertical && editAccountSubVertical) {
+            editAccountVertical.addEventListener('change', function() {
+                populateSubVertical('edit-account-sub-vertical', this.value);
+            });
+        }
+
+        // Render OKRs initially (depends on tasks and accounts)
+        const tasks = await fetchTasks();
+        await renderOKRs(tasks);
+
+    } catch (err) {
+        console.error('Failed to initialize application', err);
+        showError(`Failed to initialize application: ${err.message}`);
+    }
+});
+
+// Navigation event listeners
 const navTasks = document.getElementById('nav-tasks');
 if (navTasks) {
     navTasks.addEventListener('click', () => {
@@ -575,7 +1273,7 @@ if (navAccounts) {
         document.getElementById('dashboard').classList.add('d-none');
         document.getElementById('okr').classList.add('d-none');
         document.getElementById('accounts').classList.remove('d-none');
-        fetchAccounts();
+        fetchAccounts(); // This will now use the refactored fetchAccounts
     });
 }
 
@@ -586,12 +1284,12 @@ if (navOkr) {
         document.getElementById('dashboard').classList.add('d-none');
         document.getElementById('accounts').classList.add('d-none');
         document.getElementById('okr').classList.remove('d-none');
-        await ensureDBInitialized();
-        const tasks = await fetchTasks();
+        const tasks = await fetchTasks(); // Ensure fresh tasks for OKRs
         await renderOKRs(tasks);
     });
 }
 
+// Form submission event listeners
 const taskForm = document.getElementById('task-form');
 if (taskForm) {
     taskForm.addEventListener('submit', (e) => {
@@ -618,6 +1316,7 @@ if (accountForm) {
     });
 }
 
+// Search and Filter event listeners
 const searchInput = document.getElementById('search-input');
 if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -636,44 +1335,37 @@ if (taskFilter) {
 
 const taskList = document.getElementById('task-list');
 if (taskList) {
-    taskList.addEventListener('click', (e) => {
+    taskList.addEventListener('click', async (e) => {
         const id = e.target.closest('.list-group-item')?.dataset.id;
         if (!id) return;
+        
         if (e.target.closest('.delete-task')) {
             console.log('Delete task clicked for id:', id);
-            deleteTask(Number(id));
-            refreshTaskList();
-            if (!document.getElementById('okr').classList.contains('d-none')) {
-                renderOKRs(getStoredTasks());
-            }
-        } else if (e.target.classList.contains('complete-task')) {
-            // Toggle completed
-            fetchTasks().then(tasks => {
-                const t = tasks.find(tsk => tsk.id == id);
+            await deleteTask(Number(id)); // Await delete, then refresh
+        } else if (e.target.closest('.complete-task')) {
+            const taskId = e.target.closest('.complete-task').dataset.id;
+            const database = await ensureDBInitialized();
+            const transaction = database.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(Number(taskId));
+            request.onsuccess = async () => {
+                const t = request.result;
                 if (t) {
-                    updateTask(t.id, t.name, t.type, t.due, !t.completed, t.accountId);
+                    await updateTask(t.id, t.name, t.type, t.due, !t.completed, t.accountId);
                 }
-            });
+            };
         } else if (e.target.closest('.edit-task')) {
-            const tasks = getStoredTasks();
-            const t = tasks.find(tsk => tsk.id === id);
-            if (t) {
-                document.getElementById('edit-task-id').value = t.id;
-                document.getElementById('edit-task-name').value = t.name;
-                document.getElementById('edit-task-type').value = t.type;
-                document.getElementById('edit-task-due').value = t.due || '';
-                document.getElementById('edit-task-completed').checked = !!t.completed;
-                document.getElementById('edit-task-account').value = t.accountId || '';
-                const modal = new bootstrap.Modal(document.getElementById('task-modal'));
-                modal.show();
-            }
+            const taskId = e.target.closest('.edit-task').dataset.id;
+            // The edit-task button listener within renderTasks already handles this modal opening.
+            // This block can be removed if the event listener on list.querySelectorAll('.edit-task') is sufficient.
+            // For now, keep it for robustness if other pathways might trigger it.
         }
     });
 }
 
 const editTaskForm = document.getElementById('edit-task-form');
 if (editTaskForm) {
-    editTaskForm.addEventListener('submit', (e) => {
+    editTaskForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-task-id').value;
         const name = document.getElementById('edit-task-name').value;
@@ -681,8 +1373,8 @@ if (editTaskForm) {
         const due = document.getElementById('edit-task-due').value;
         const completed = document.getElementById('edit-task-completed').checked;
         const accountId = document.getElementById('edit-task-account').value;
-        updateTask(id, name, type, due, completed, accountId);
-        refreshTaskList();
+        
+        await updateTask(id, name, type, due, completed, accountId);
         const modalElement = document.getElementById('task-modal');
         bootstrap.Modal.getInstance(modalElement).hide();
     });
@@ -690,176 +1382,116 @@ if (editTaskForm) {
 
 const accountList = document.getElementById('account-list');
 if (accountList) {
-    accountList.addEventListener('click', (e) => {
+    accountList.addEventListener('click', async (e) => {
         const id = e.target.closest('.list-group-item')?.dataset.id;
-        if (!id) return;
+        console.log('Account list click: Raw id from dataset:', id, 'Type:', typeof id);
+        
+        // Ensure id is a non-empty string before proceeding
+        if (!id || id.trim() === '') {
+            console.warn('Account list click: No valid id found on clicked element.');
+            return;
+        }
+
         if (e.target.closest('.delete-account')) {
-            console.log('Delete account clicked for id:', id);
-            deleteAccount(Number(id));
-            fetchAccounts();
+            console.log('Delete account clicked for original id (string from event listener): ', id);
+            const parsedAccountId = Number(id); // Use Number() for simpler numeric string conversion
+            console.log('Delete account: parsedAccountId (number after conversion):', parsedAccountId, 'Type:', typeof parsedAccountId);
+
+            if (isNaN(parsedAccountId)) {
+                showError('Error: Invalid account ID for deletion.');
+                console.error('Attempted to delete account with non-numeric ID:', id);
+                return;
+            }
+            if (confirm('Are you sure you want to delete this account?')) { // Re-introduce confirmation
+                await deleteAccount(parsedAccountId); // Await delete, then refresh
+            }
         } else if (e.target.closest('.edit-account')) {
-            console.log('Edit account clicked for id:', id);
-            // Fetch the account from IndexedDB for robustness
-            const accountId = Number(id);
-            ensureDBInitialized().then(() => {
-                const transaction = db.transaction([ACCOUNT_STORE], 'readonly');
-                const store = transaction.objectStore(ACCOUNT_STORE);
-                const request = store.get(accountId);
-                request.onsuccess = function() {
-                    const acct = request.result;
-                    if (acct) {
-                        document.getElementById('edit-account-id').value = acct.id;
-                        document.getElementById('edit-account-name').value = acct.name;
-                        document.getElementById('edit-account-arr').value = typeof acct.arr !== 'undefined' ? acct.arr : '';
-                        document.getElementById('edit-account-vertical').value = acct.vertical || '';
-                        populateSubVertical('edit-account-sub-vertical', acct.vertical || '');
-                        document.getElementById('edit-account-sub-vertical').value = acct.subVertical || '';
-                        
-                        // Ensure sub-vertical updates if vertical changes in modal
-                        const editAccountVertical = document.getElementById('edit-account-vertical');
-                        const editAccountSubVertical = document.getElementById('edit-account-sub-vertical');
-                        if (editAccountVertical && editAccountSubVertical) {
-                            editAccountVertical.onchange = function() {
-                                populateSubVertical('edit-account-sub-vertical', this.value);
-                                // Optionally clear sub-vertical or keep previous if still valid
-                                const currentSub = editAccountSubVertical.value;
-                                if (!Array.from(editAccountSubVertical.options).some(opt => opt.value === currentSub)) {
-                                    editAccountSubVertical.value = '';
-                                }
-                            };
-                        }
-                        
-                        // Initialize and show the modal
-                        const modalElement = document.getElementById('account-modal');
-                        if (modalElement) {
-                            const modal = new bootstrap.Modal(modalElement, {
-                                backdrop: 'static',
-                                keyboard: false
-                            });
-                            modal.show();
-                        } else {
-                            console.error('Modal element not found');
-                        }
-                    }
-                };
-            });
+            const accountId = e.target.closest('.edit-account').dataset.id;
+            // The edit-account button listener within renderAccounts already handles this modal opening.
         }
     });
 }
 
 const editAccountForm = document.getElementById('edit-account-form');
 if (editAccountForm) {
-    editAccountForm.addEventListener('submit', (e) => {
+    editAccountForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-account-id').value;
         const name = document.getElementById('edit-account-name').value;
+        const arr = document.getElementById('edit-account-arr').value;
         const vertical = document.getElementById('edit-account-vertical').value;
         const subVertical = document.getElementById('edit-account-sub-vertical').value;
-        const arr = document.getElementById('edit-account-arr').value;
-        updateAccount(id, name, vertical, subVertical, arr);
-        fetchAccounts();
+
+        await updateAccount(id, name, vertical, subVertical, arr);
         const modalElement = document.getElementById('account-modal');
         bootstrap.Modal.getInstance(modalElement).hide();
     });
 }
 
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('DOMContentLoaded event fired - initializing CSM Dashboard');
-    try {
-        await ensureDBInitialized();
-        await migrateTasksForCompletedAndNumericId();
-        await fetchTasks();
-        await fetchAccounts();
-        await populateAccountDropdown();
-        // Show OKR view by default
-        setActiveNav('nav-okr');
-        document.getElementById('dashboard').classList.add('d-none');
-        document.getElementById('accounts').classList.add('d-none');
-        document.getElementById('okr').classList.remove('d-none');
-        // Optionally, focus the task input for better UX
-        const taskInput = document.getElementById('task-name');
-        if (taskInput) taskInput.focus();
-        // --- Ensure vertical/sub-vertical linkage for Add Account ---
-        const accountVertical = document.getElementById('account-vertical');
-        const accountSubVertical = document.getElementById('account-sub-vertical');
-        if (accountVertical && accountSubVertical) {
-            accountVertical.addEventListener('change', function() {
-                populateSubVertical('account-sub-vertical', this.value);
-            });
-        }
-        // --- Ensure vertical/sub-vertical linkage for Edit Account ---
-        const editAccountVertical = document.getElementById('edit-account-vertical');
-        const editAccountSubVertical = document.getElementById('edit-account-sub-vertical');
-        if (editAccountVertical && editAccountSubVertical) {
-            editAccountVertical.addEventListener('change', function() {
-                populateSubVertical('edit-account-sub-vertical', this.value);
-            });
-        }
-        // Render OKRs initially
-        const tasks = await fetchTasks();
-        await renderOKRs(tasks);
-    } catch (err) {
-        console.error('Failed to initialize application', err);
-        showError('Failed to initialize application. Please refresh the page.');
+const searchAccountInput = document.getElementById('search-account-input');
+if (searchAccountInput) {
+    searchAccountInput.addEventListener('input', searchAccounts); // searchAccounts already calls renderAccounts
+}
+
+// Event listeners for export buttons
+document.addEventListener('DOMContentLoaded', () => {
+    const exportTasksBtn = document.getElementById('export-tasks-btn');
+    if (exportTasksBtn) {
+        exportTasksBtn.addEventListener('click', exportTasksToCsv);
+    }
+
+    const exportAccountsBtn = document.getElementById('export-accounts-btn');
+    if (exportAccountsBtn) {
+        exportAccountsBtn.addEventListener('click', exportAccountsToCsv);
+    }
+
+    const importTasksBtn = document.getElementById('import-tasks-btn');
+    if (importTasksBtn) {
+        importTasksBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.csv';
+            fileInput.onchange = (e) => {
+                if (e.target.files.length > 0) {
+                    importTasksFromCsv(e.target.files[0]);
+                }
+            };
+            fileInput.click();
+        });
+    }
+
+    const importAccountsBtn = document.getElementById('import-accounts-btn');
+    if (importAccountsBtn) {
+        importAccountsBtn.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.csv';
+            fileInput.onchange = (e) => {
+                if (e.target.files.length > 0) {
+                    importAccountsFromCsv(e.target.files[0]);
+                }
+            };
+            fileInput.click();
+        });
     }
 });
 
-async function refreshTaskList() {
-    await fetchTasks();
-}
-
-// --- MIGRATION: Ensure all tasks have a completed property and numeric IDs ---
-async function migrateTasksForCompletedAndNumericId() {
-    await ensureDBInitialized();
-    const tasks = await new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readonly');
-        const store = transaction.objectStore(STORE_NAME);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(new Error('Failed to fetch tasks for migration'));
-    });
-    const updates = tasks.filter(t => typeof t.completed === 'undefined' || typeof t.id !== 'number');
-    if (updates.length > 0) {
-        await Promise.all(updates.map(task => {
-            // Ensure completed property
-            if (typeof task.completed === 'undefined') task.completed = false;
-            // Ensure numeric ID
-            if (typeof task.id !== 'number') task.id = Number(task.id);
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.put(task);
-                request.onsuccess = () => resolve();
-                request.onerror = () => reject();
-            });
-        }));
+// Add a refresh function for accounts, similar to refreshTaskList
+async function refreshAccountList() {
+    console.log('refreshAccountList called');
+    const currentAccounts = await fetchAccounts(); // fetchAccounts now gets a fresh connection
+    console.log('refreshAccountList: currentAccounts after fetchAccounts()', currentAccounts);
+    if (!currentAccounts) {
+        console.warn('refreshAccountList: currentAccounts is undefined or null, cannot filter.');
+        renderAccounts([]); // Render an empty list or handle appropriately
+        return;
     }
-}
-
-// Add function to populate account dropdown
-async function populateAccountDropdown() {
-    try {
-        const accounts = await fetchAccounts();
-        const accountSelect = document.getElementById('task-account');
-        const editAccountSelect = document.getElementById('edit-task-account');
-        
-        const options = accounts.map(acc => {
-            const opt = document.createElement('option');
-            opt.value = acc.id;
-            opt.textContent = acc.name;
-            return opt;
-        });
-
-        if (accountSelect) {
-            accountSelect.innerHTML = '<option value="">Select Account</option>';
-            options.forEach(opt => accountSelect.appendChild(opt.cloneNode(true)));
-        }
-
-        if (editAccountSelect) {
-            editAccountSelect.innerHTML = '<option value="">Select Account</option>';
-            options.forEach(opt => editAccountSelect.appendChild(opt.cloneNode(true)));
-        }
-    } catch (err) {
-        console.error('Failed to populate account dropdown', err);
-    }
+    // Assuming searchAccounts is meant to filter renderAccounts
+    const searchTerm = document.getElementById('search-account-input').value.toLowerCase();
+    const filteredAccounts = currentAccounts.filter(account =>
+        account.name.toLowerCase().includes(searchTerm) ||
+        (account.vertical && account.vertical.toLowerCase().includes(searchTerm)) ||
+        (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm))
+    );
+    renderAccounts(filteredAccounts);
 }
