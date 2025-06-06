@@ -371,7 +371,8 @@ async function searchAccounts() {
                 const filteredAccounts = request.result.filter(account =>
                     account.name.toLowerCase().includes(searchTerm) ||
                     (account.vertical && account.vertical.toLowerCase().includes(searchTerm)) ||
-                    (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm))
+                    (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm)) ||
+                    (account.renewalDate && account.renewalDate.toLowerCase().includes(searchTerm))
                 );
                 renderAccounts(filteredAccounts);
                 resolve(filteredAccounts);
@@ -439,6 +440,13 @@ function renderAccounts(accts) {
             badge.textContent = acc.subVertical;
             span.appendChild(badge);
         }
+        // Show Renewal Date if present
+        if (acc.renewalDate) {
+            const renewalDateSpan = document.createElement('span');
+            renewalDateSpan.className = 'badge rounded-pill ms-2 bg-primary'; // Or another suitable class
+            renewalDateSpan.textContent = `Renewal: ${new Date(acc.renewalDate).toLocaleDateString()}`;
+            span.appendChild(renewalDateSpan);
+        }
         li.appendChild(span);
 
         const btnGroup = document.createElement('div');
@@ -461,11 +469,21 @@ function renderAccounts(accts) {
     // Add event listeners for edit and delete buttons
     list.querySelectorAll('.edit-account').forEach(button => {
         button.addEventListener('click', async (e) => {
-            const accountId = e.currentTarget.dataset.id;
+            const accountId = e.target.closest('.list-group-item')?.dataset.id; // Correctly get ID from parent list item
+            console.log('Edit account clicked for original id (string):', accountId);
+            const parsedAccountId = Number(accountId); // Use Number() for simpler numeric string conversion
+            console.log('Edit account: parsedAccountId (number after conversion):', parsedAccountId, 'Type:', typeof parsedAccountId);
+
+            if (isNaN(parsedAccountId)) {
+                showError('Error: Invalid account ID for editing.');
+                console.error('Attempted to edit account with non-numeric ID:', accountId);
+                return;
+            }
+
             const database = await ensureDBInitialized();
             const transaction = database.transaction([ACCOUNT_STORE], 'readonly');
             const store = transaction.objectStore(ACCOUNT_STORE);
-            const request = store.get(Number(accountId));
+            const request = store.get(parsedAccountId); // Use the parsed ID
 
             request.onsuccess = () => {
                 const account = request.result;
@@ -473,6 +491,7 @@ function renderAccounts(accts) {
                     document.getElementById('edit-account-id').value = account.id;
                     document.getElementById('edit-account-name').value = account.name;
                     document.getElementById('edit-account-arr').value = account.arr || '';
+                    document.getElementById('edit-account-renewal-date').value = account.renewalDate || ''; // Populate renewal date
                     document.getElementById('edit-account-vertical').value = account.vertical || '';
                     populateSubVertical('edit-account-sub-vertical', account.vertical || '');
                     document.getElementById('edit-account-sub-vertical').value = account.subVertical || '';
@@ -490,7 +509,8 @@ async function addAccount(name, vertical, subVertical, arr) {
     showLoading();
     try {
         const database = await ensureDBInitialized();
-        const account = { name, vertical, subVertical, arr };
+        const renewalDate = document.getElementById('account-renewal-date').value; // Get renewal date
+        const account = { name, vertical, subVertical, arr, renewalDate }; // Add renewalDate to account object
         await new Promise((resolve, reject) => {
             const transaction = database.transaction([ACCOUNT_STORE], 'readwrite');
             const store = transaction.objectStore(ACCOUNT_STORE);
@@ -514,7 +534,8 @@ async function updateAccount(id, name, vertical, subVertical, arr) {
     showLoading();
     try {
         const database = await ensureDBInitialized();
-        const account = { id: Number(id), name, vertical, subVertical, arr };
+        const renewalDate = document.getElementById('edit-account-renewal-date').value; // Get renewal date
+        const account = { id: Number(id), name, vertical, subVertical, arr, renewalDate }; // Include renewalDate
         await new Promise((resolve, reject) => {
             const transaction = database.transaction([ACCOUNT_STORE], 'readwrite');
             const store = transaction.objectStore(ACCOUNT_STORE);
@@ -851,7 +872,7 @@ async function exportAccountsToCsv() {
             return;
         }
 
-        const headers = ['ID', 'Name', 'ARR', 'Vertical', 'Sub-Vertical'];
+        const headers = ['ID', 'Name', 'ARR', 'Renewal Date', 'Vertical', 'Sub-Vertical'];
         const csvRows = [headers.join(',')];
 
         accounts.forEach(account => {
@@ -859,6 +880,7 @@ async function exportAccountsToCsv() {
                 account.id,
                 `"${account.name.replace(/"/g, '""')}"`,
                 account.arr || '',
+                account.renewalDate || '',
                 account.vertical || '',
                 account.subVertical || ''
             ];
@@ -1064,11 +1086,11 @@ async function importAccountsFromCsv(file) {
                 }
 
                 const headers = lines[0].split(',').map(header => header.trim().toLowerCase());
-                const expectedHeaders = ['id', 'name', 'arr', 'vertical', 'sub-vertical'];
+                const expectedHeaders = ['id', 'name', 'arr', 'renewal date', 'vertical', 'sub-vertical'];
 
                 const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
                 if (missingHeaders.length > 0) {
-                    showError(`Missing expected CSV headers: ${missingHeaders.join(', ')}. Please ensure the CSV has columns for ID, Name, ARR, Vertical, and Sub-Vertical.`);
+                    showError(`Missing expected CSV headers: ${missingHeaders.join(', ')}. Please ensure the CSV has columns for ID, Name, ARR, Renewal Date, Vertical, and Sub-Vertical.`);
                     return;
                 }
                 
@@ -1096,6 +1118,9 @@ async function importAccountsFromCsv(file) {
                                 break;
                             case 'arr':
                                 account.arr = value ? Number(value) : null;
+                                break;
+                            case 'renewal date':
+                                account.renewalDate = value;
                                 break;
                             case 'vertical':
                                 account.vertical = value;
@@ -1491,7 +1516,8 @@ async function refreshAccountList() {
     const filteredAccounts = currentAccounts.filter(account =>
         account.name.toLowerCase().includes(searchTerm) ||
         (account.vertical && account.vertical.toLowerCase().includes(searchTerm)) ||
-        (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm))
+        (account.subVertical && account.subVertical.toLowerCase().includes(searchTerm)) ||
+        (account.renewalDate && account.renewalDate.toLowerCase().includes(searchTerm))
     );
     renderAccounts(filteredAccounts);
 }

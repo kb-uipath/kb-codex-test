@@ -74,9 +74,11 @@
                                     <h3 class="card-title h5 mb-3">Add Task</h3>
                                     <form id="task-form" class="row g-2 flex-column">
                                         <div class="mb-3">
-                                            <input type="text" id="task-name" class="form-control" placeholder="Task description" required>
+                                            <label class="form-label">Task Description</label>
+                                            <input type="text" id="task-name" class="form-control" required>
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Type</label>
                                             <select id="task-type" class="form-select">
                                                 <option value="">Select Type</option>
                                                 <option value="Risk">Risk Mitigation</option>
@@ -86,12 +88,14 @@
                                             </select>
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Account</label>
                                             <select id="task-account" class="form-select">
                                                 <option value="">Select Account</option>
                                                 <!-- Options will be populated dynamically -->
                                             </select>
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Due Date</label>
                                             <input type="date" id="task-due" class="form-control">
                                         </div>
                                         <div class="mb-3">
@@ -131,12 +135,19 @@
                                     <h3 class="card-title h5 mb-3">Add Account</h3>
                                     <form id="account-form" class="row g-2 flex-column">
                                         <div class="mb-3">
-                                            <input type="text" id="account-name" class="form-control" placeholder="Account name" required>
+                                            <label class="form-label">Account Name</label>
+                                            <input type="text" id="account-name" class="form-control" required>
                                         </div>
                                         <div class="mb-3">
-                                            <input type="number" id="account-arr" class="form-control" placeholder="Account ARR ($)" min="0" step="0.01">
+                                            <label class="form-label">Account ARR ($)</label>
+                                            <input type="number" id="account-arr" class="form-control" min="0" step="0.01">
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Renewal Date</label>
+                                            <input type="date" id="account-renewal-date" class="form-control">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Vertical</label>
                                             <select id="account-vertical" class="form-select" required>
                                                 <option value="">Select Vertical</option>
                                                 <option value="Public Sector">Public Sector</option>
@@ -147,6 +158,7 @@
                                             </select>
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Sub-Vertical</label>
                                             <select id="account-sub-vertical" class="form-select" required>
                                                 <option value="">Select Sub-Vertical</option>
                                                 <!-- Options will be populated dynamically -->
@@ -246,6 +258,10 @@
                                     <div class="mb-3">
                                         <label class="form-label">Account ARR ($)</label>
                                         <input type="number" id="edit-account-arr" class="form-control" min="0" step="0.01">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Renewal Date</label>
+                                        <input type="date" id="edit-account-renewal-date" class="form-control">
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label">Vertical</label>
