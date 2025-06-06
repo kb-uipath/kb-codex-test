@@ -715,22 +715,29 @@ async function renderOKRs(tasks) {
 
         OKR_TYPES.forEach(type => {
             const metric = okrSummary[type];
-            const percentage = metric.total > 0 ? (metric.completed / metric.total) * 100 : 0;
-            const progressColor = percentage === 100 ? 'bg-success' : (percentage > 50 ? 'bg-warning' : 'bg-danger');
+            const target = okrTargets[type] !== undefined ? okrTargets[type] : 0;
+
+            // Calculate widths for the two segments of the progress bar
+            const completedWidth = target > 0 ? (metric.completed / target) * 100 : 0;
+            const totalButNotCompletedWidth = target > 0 ? ((metric.total - metric.completed) / target) * 100 : 0;
+
+            const progressColorCompleted = completedWidth === 100 ? 'bg-success' : (completedWidth > 0 ? 'bg-danger' : '');
+            const progressColorTotal = totalButNotCompletedWidth > 0 ? 'bg-secondary' : '';
 
             const itemDiv = document.createElement('div');
             itemDiv.className = 'list-group-item d-flex justify-content-between align-items-center';
             itemDiv.innerHTML = `
-                <div>
+                <div class="flex-grow-1">
                     <h5 class="mb-1">${type} OKR</h5>
                     <small>Completed: ${metric.completed} / Total: ${metric.total}</small>
                     <div class="progress mt-2" style="height: 10px;">
-                        <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                        <div class="progress-bar ${progressColorCompleted}" role="progressbar" style="width: ${completedWidth}%" aria-valuenow="${metric.completed}" aria-valuemin="0" aria-valuemax="${target}"></div>
+                        <div class="progress-bar ${progressColorTotal}" role="progressbar" style="width: ${totalButNotCompletedWidth}%" aria-valuenow="${metric.total - metric.completed}" aria-valuemin="0" aria-valuemax="${target}"></div>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
                     <span class="me-2">Target:</span>
-                    <input type="number" class="form-control okr-target-input" data-okr-type="${type}" value="${metric.target}" style="width: 80px;">
+                    <input type="number" class="form-control okr-target-input" data-okr-type="${type}" value="${target}" style="width: 80px;">
                 </div>
             `;
             okrMetricsDiv.appendChild(itemDiv);
@@ -784,7 +791,7 @@ function computeRollup(tasks, accounts, key) {
     return summary;
 }
 
-function renderRollup(summary, containerId) {
+function renderRollup(summary, containerId, okrTargets) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
     Object.keys(summary).sort().forEach(group => {
@@ -799,15 +806,16 @@ function renderRollup(summary, containerId) {
         body.appendChild(title);
         OKR_TYPES.forEach(type => {
             const metric = metrics[type];
-            const percentage = metric.total > 0 ? (metric.completed / metric.total) * 100 : 0;
+            const target = okrTargets[type] !== undefined ? okrTargets[type] : 0;
+            const percentage = target > 0 ? (metric.completed / target) * 100 : 0;
             const progressColor = percentage === 100 ? 'bg-success' : (percentage > 50 ? 'bg-warning' : 'bg-danger');
             const item = document.createElement('div');
             item.className = 'mb-2';
             item.innerHTML = `
                 <strong>${type}</strong>
-                <small class="ms-2">${metric.completed}/${metric.total}</small>
+                <small class="ms-2">${metric.completed}/${target}</small>
                 <div class="progress mt-1" style="height: 8px;">
-                    <div class="progress-bar ${progressColor}" style="width: ${percentage}%"></div>
+                    <div class="progress-bar ${progressColor}" style="width: ${percentage}%" aria-valuenow="${percentage}" aria-valuemin="0" aria-valuemax="${target}"></div>
                 </div>`;
             body.appendChild(item);
         });
@@ -819,15 +827,17 @@ function renderRollup(summary, containerId) {
 async function renderVerticalRollup() {
     const tasks = await fetchTasks();
     const accounts = await fetchAccounts();
+    const okrTargets = await getOKRTargets();
     const summary = computeRollup(tasks, accounts, 'vertical');
-    renderRollup(summary, 'vertical-summary');
+    renderRollup(summary, 'vertical-summary', okrTargets);
 }
 
 async function renderSubVerticalRollup() {
     const tasks = await fetchTasks();
     const accounts = await fetchAccounts();
+    const okrTargets = await getOKRTargets();
     const summary = computeRollup(tasks, accounts, 'subVertical');
-    renderRollup(summary, 'sub-vertical-summary');
+    renderRollup(summary, 'sub-vertical-summary', okrTargets);
 }
 
 function setActiveNav(navId) {
