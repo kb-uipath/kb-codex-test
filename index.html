@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSM Dashboard</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
@@ -45,111 +46,137 @@
             </nav>
             
             <main class="col px-4 py-3" id="main-content">
-                <section id="dashboard" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="mb-0">Your Tasks</h2>
-                        <div class="d-flex gap-2">
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-end-0">
-                                    <i class="bi bi-search"></i>
-                                </span>
-                                <input type="text" id="search-input" class="form-control border-start-0" placeholder="Search tasks...">
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <section id="dashboard" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="mb-0">Your Tasks</h2>
+                                <div class="d-flex gap-2 ms-auto">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" id="search-input" class="form-control border-start-0" placeholder="Search tasks...">
+                                    </div>
+                                    <button id="import-tasks-btn" class="btn btn-outline-secondary me-2">
+                                        <i class="bi bi-upload me-1"></i>Import Tasks
+                                    </button>
+                                    <button id="export-tasks-btn" class="btn btn-outline-secondary">
+                                        <i class="bi bi-download me-1"></i>Export Tasks
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                            
+                            <div id="task-list" class="list-group mb-4"></div>
+                            
+                            <div class="card">
+                                <div class="card-body">
+                                    <h3 class="card-title h5 mb-3">Add Task</h3>
+                                    <form id="task-form" class="row g-2 flex-column">
+                                        <div class="mb-3">
+                                            <input type="text" id="task-name" class="form-control" placeholder="Task description" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <select id="task-type" class="form-select">
+                                                <option value="">Select Type</option>
+                                                <option value="Risk">Risk Mitigation</option>
+                                                <option value="Upsell">Upsell/Cross-sell</option>
+                                                <option value="Story">Success Story</option>
+                                                <option value="EBC">EBC/QBR</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <select id="task-account" class="form-select">
+                                                <option value="">Select Account</option>
+                                                <!-- Options will be populated dynamically -->
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="date" id="task-due" class="form-control">
+                                        </div>
+                                        <div class="mb-3">
+                                            <button class="btn btn-primary w-100" type="submit">
+                                                <i class="bi bi-plus-lg me-1"></i>Add
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                    
-                    <div id="task-list" class="list-group mb-4"></div>
-                    
-                    <div class="card">
-                        <div class="card-body">
-                            <h3 class="card-title h5 mb-3">Add Task</h3>
-                            <form id="task-form" class="row g-2 flex-column">
-                                <div class="mb-3">
-                                    <input type="text" id="task-name" class="form-control" placeholder="Task description" required>
-                                </div>
-                                <div class="mb-3">
-                                    <select id="task-type" class="form-select">
-                                        <option value="">Select Type</option>
-                                        <option value="Risk">Risk Mitigation</option>
-                                        <option value="Upsell">Upsell/Cross-sell</option>
-                                        <option value="Story">Success Story</option>
-                                        <option value="EBC">EBC/QBR</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <select id="task-account" class="form-select">
-                                        <option value="">Select Account</option>
-                                        <!-- Options will be populated dynamically -->
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <input type="date" id="task-due" class="form-control">
-                                </div>
-                                <div class="mb-3">
-                                    <button class="btn btn-primary w-100" type="submit">
-                                        <i class="bi bi-plus-lg me-1"></i>Add
+                    <div class="col-12 mb-4">
+                        <section id="accounts" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="mb-0">Accounts</h2>
+                                <div class="d-flex gap-2 ms-auto">
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text" id="search-account-input" class="form-control border-start-0" placeholder="Search accounts...">
+                                    </div>
+                                    <button id="import-accounts-btn" class="btn btn-outline-secondary me-2">
+                                        <i class="bi bi-upload me-1"></i>Import Accounts
+                                    </button>
+                                    <button id="export-accounts-btn" class="btn btn-outline-secondary">
+                                        <i class="bi bi-download me-1"></i>Export Accounts
                                     </button>
                                 </div>
-                            </form>
-                        </div>
-                    </div>
-                </section>
-
-                <section id="accounts" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="mb-0">Accounts</h2>
-                    </div>
-                    
-                    <div id="account-list" class="list-group mb-4"></div>
-                    
-                    <div class="card">
-                        <div class="card-body">
-                            <h3 class="card-title h5 mb-3">Add Account</h3>
-                            <form id="account-form" class="row g-2 flex-column">
-                                <div class="mb-3">
-                                    <input type="text" id="account-name" class="form-control" placeholder="Account name" required>
+                            </div>
+                            
+                            <div id="account-list" class="list-group mb-4"></div>
+                            
+                            <div class="card">
+                                <div class="card-body">
+                                    <h3 class="card-title h5 mb-3">Add Account</h3>
+                                    <form id="account-form" class="row g-2 flex-column">
+                                        <div class="mb-3">
+                                            <input type="text" id="account-name" class="form-control" placeholder="Account name" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="number" id="account-arr" class="form-control" placeholder="Account ARR ($)" min="0" step="0.01">
+                                        </div>
+                                        <div class="mb-3">
+                                            <select id="account-vertical" class="form-select" required>
+                                                <option value="">Select Vertical</option>
+                                                <option value="Public Sector">Public Sector</option>
+                                                <option value="HLS">HLS</option>
+                                                <option value="FINS">FINS</option>
+                                                <option value="SUMMIT">SUMMIT</option>
+                                                <option value="Commercial">Commercial</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <select id="account-sub-vertical" class="form-select" required>
+                                                <option value="">Select Sub-Vertical</option>
+                                                <!-- Options will be populated dynamically -->
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <button class="btn btn-primary w-100" type="submit">
+                                                <i class="bi bi-plus-lg me-1"></i>Add
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
-                                <div class="mb-3">
-                                    <input type="number" id="account-arr" class="form-control" placeholder="Account ARR ($)" min="0" step="0.01">
-                                </div>
-                                <div class="mb-3">
-                                    <select id="account-vertical" class="form-select" required>
-                                        <option value="">Select Vertical</option>
-                                        <option value="Public Sector">Public Sector</option>
-                                        <option value="HLS">HLS</option>
-                                        <option value="FINS">FINS</option>
-                                        <option value="SUMMIT">SUMMIT</option>
-                                        <option value="Commercial">Commercial</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <select id="account-sub-vertical" class="form-select" required>
-                                        <option value="">Select Sub-Vertical</option>
-                                        <!-- Options will be populated dynamically -->
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <button class="btn btn-primary w-100" type="submit">
-                                        <i class="bi bi-plus-lg me-1"></i>Add
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                        </section>
                     </div>
-                </section>
-
-                <section id="okr" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2 class="mb-0">OKR Summary</h2>
+                    <div class="col-12 mb-4">
+                        <section id="okr" class="d-none">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <h2 class="mb-0">OKR Summary</h2>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                    <form id="okr-targets-form">
+                                        <div id="okr-metrics" class="list-group list-group-flush"></div>
+                                    </form>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-                    <div class="card">
-                        <div class="card-body">
-                            <form id="okr-targets-form">
-                                <div id="okr-metrics" class="list-group list-group-flush"></div>
-                            </form>
-                        </div>
-                    </div>
-                </section>
+                </div>
 
                 <!-- Edit Task Modal -->
                 <div class="modal fade" id="task-modal" tabindex="-1" aria-hidden="true">

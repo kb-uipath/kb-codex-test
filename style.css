@@ -1,31 +1,56 @@
 :root {
     /* UiPath Brand Colors */
     --uipath-primary: #FA4616;      /* UiPath Orange */
-    --uipath-secondary: #2C3E50;    /* Dark Blue */
+    --uipath-secondary: #34495e;    /* Softer Dark Blue */
     --uipath-accent: #3498DB;       /* Light Blue */
     --uipath-success: #27AE60;      /* Green */
     --uipath-warning: #F1C40F;      /* Yellow */
     --uipath-danger: #E74C3C;       /* Red */
-    --uipath-light: #F8F9FA;        /* Light Gray */
-    --uipath-dark: #2C3E50;         /* Dark Blue */
-    --uipath-text: #2C3E50;         /* Dark Blue for text */
+    --uipath-light: #f0f2f5;        /* Soft Light Gray */
+    --uipath-dark: #34495e;         /* Softer Dark Blue */
+    --uipath-text: #34495e;         /* Softer Dark Blue for text */
     --uipath-bg: #FFFFFF;           /* White background */
-    --uipath-border: rgba(0,0,0,0.08); /* Subtle border color */
-    --uipath-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --uipath-border: #e0e0e0;       /* Lighter border color */
+    --uipath-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Softer shadow */
+
+    /* Global Bootstrap Overrides */
+    --bs-primary: var(--uipath-primary);
+    --bs-secondary: var(--uipath-secondary);
+    --bs-success: var(--uipath-success);
+    --bs-info: var(--uipath-accent); /* Using accent for info, as it's a light blue */
+    --bs-warning: var(--uipath-warning);
+    --bs-danger: var(--uipath-danger);
+    --bs-light: var(--uipath-light);
+    --bs-dark: var(--uipath-dark);
+    --bs-body-color: var(--uipath-text);
+    --bs-body-bg: var(--uipath-bg);
+    --bs-border-color: var(--uipath-border);
+    --bs-font-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    --bs-card-cap-bg: var(--uipath-light);
+    --bs-card-border-color: var(--uipath-border);
+    --bs-link-color: var(--uipath-primary);
+    --bs-link-hover-color: #e03e0d; /* Slightly darker primary for hover */
+    --bs-body-font-size: 0.9375rem; /* ~15px for improved readability */
+    --bs-body-line-height: 1.6;
+    --bs-border-radius: 0.75rem; /* Default rounded corners for many components (~12px) */
+    --bs-border-radius-lg: 1rem; /* Larger rounded corners (~16px) */
+    --bs-border-radius-xl: 1.5rem; /* Even larger for certain elements (~24px) */
 }
 
 body {
-    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     color: var(--uipath-text);
     background-color: var(--uipath-bg);
     line-height: 1.6;
+    font-size: var(--bs-body-font-size);
+    line-height: var(--bs-body-line-height);
 }
 
 /* Header Styling */
 header {
     background-color: var(--uipath-primary) !important;
-    box-shadow: var(--uipath-shadow);
-    padding: 1rem 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Slightly more pronounced shadow for header */
+    padding: 1.25rem 0;
 }
 
 /* Sidebar Styling */
@@ -33,99 +58,153 @@ header {
     min-height: 100vh;
     background-color: var(--uipath-light);
     border-right: 1px solid var(--uipath-border);
-    padding: 1.5rem 1rem;
+    padding: 2rem 1.25rem; /* Increased padding */
+}
+
+.sidebar h5 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--uipath-dark);
+    margin-bottom: 1.75rem; /* More space below nav title */
 }
 
 .nav-link {
     color: var(--uipath-text);
     transition: all 0.3s ease;
-    border-radius: 8px;
-    margin: 4px 0;
-    padding: 0.75rem 1rem;
+    border-radius: var(--bs-border-radius);
+    margin: 6px 0; /* More vertical space between nav items */
+    padding: 0.85rem 1.25rem; /* Slightly more padding */
     font-weight: 500;
+    display: flex;
+    align-items: center;
+}
+
+.nav-link i {
+    font-size: 1.1rem;
+    margin-right: 0.75rem;
 }
 
 .nav-link:hover {
-    background-color: rgba(250, 70, 22, 0.08);
+    background-color: rgba(250, 70, 22, 0.12); /* Slightly stronger hover background */
     color: var(--uipath-primary);
-    transform: translateX(4px);
+    transform: translateX(6px); /* More noticeable slide effect */
 }
 
 .nav-link.active {
     background-color: var(--uipath-primary);
     color: white;
-    box-shadow: var(--uipath-shadow);
+    box-shadow: 0 4px 8px rgba(250, 70, 22, 0.25); /* Softer, more prominent shadow for active state */
+    transform: none; /* Remove slide effect for active */
 }
 
 /* Task and Account Items */
 .task-item, .list-group-item {
     border: 1px solid var(--uipath-border);
-    margin-bottom: 12px;
-    border-radius: 12px !important;
-    transition: all 0.2s ease;
-    padding: 1rem;
+    margin-bottom: 1rem; /* Consistent spacing */
+    border-radius: var(--bs-border-radius-lg) !important; /* Larger rounded corners */
+    transition: all 0.25s ease;
+    padding: 1.25rem;
     background-color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); /* Softer, more diffused shadow */
 }
 
 .task-item:hover, .list-group-item:hover {
-    box-shadow: var(--uipath-shadow);
-    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08); /* More prominent on hover */
+    transform: translateY(-3px); /* More noticeable lift */
+}
+
+/* Cards */
+.card {
+    border: none; /* Remove default border, rely on shadow for separation */
+    border-radius: var(--bs-border-radius-xl); /* Even larger rounded corners for cards */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); /* Softer, more diffused shadow for cards */
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1); /* More prominent on hover */
+    transform: translateY(-4px); /* More noticeable lift */
+}
+
+.card-body {
+    padding: 2rem; /* Even more increased padding */
+}
+
+.card-title {
+    font-weight: 700; /* Bolder title */
+    font-size: 1.35rem; /* Slightly larger title */
+    color: var(--uipath-dark);
+    margin-bottom: 1.5rem;
 }
 
 /* Buttons */
 .btn {
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.2s ease;
+    padding: 0.9rem 1.8rem; /* Slightly larger padding for buttons */
+    border-radius: var(--bs-border-radius); /* Apply default rounded corners */
+    font-weight: 600;
+    transition: all 0.25s ease;
 }
 
 .btn-primary {
     background-color: var(--uipath-primary);
     border-color: var(--uipath-primary);
-    box-shadow: 0 2px 4px rgba(250, 70, 22, 0.2);
+    box-shadow: 0 4px 10px rgba(250, 70, 22, 0.3); /* More prominent shadow for primary button */
 }
 
 .btn-primary:hover {
     background-color: #e03e0d;
     border-color: #e03e0d;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(250, 70, 22, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(250, 70, 22, 0.4);
 }
 
 .btn-outline-secondary {
-    color: var(--uipath-text);
-    border-color: var(--uipath-text);
+    color: var(--uipath-dark);
+    border-color: var(--uipath-border);
     background-color: transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow for outline buttons */
 }
 
 .btn-outline-secondary:hover {
-    background-color: var(--uipath-text);
-    color: white;
-    transform: translateY(-1px);
+    background-color: var(--uipath-light);
+    color: var(--uipath-primary);
+    transform: translateY(-2px);
+    border-color: var(--uipath-primary);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08); /* Slightly more prominent on hover */
+}
+
+#export-tasks-btn,
+#export-accounts-btn,
+#import-tasks-btn,
+#import-accounts-btn {
+    white-space: nowrap;
+    padding: 0.75rem 1.2rem; /* Adjusted padding */
+    font-size: 0.95rem; /* Slightly smaller font for these buttons */
 }
 
 /* Badges */
 .badge {
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.9rem;
     border-radius: 20px;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.75rem;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
 }
 
 /* Forms */
 .form-control, .form-select {
     border: 1px solid var(--uipath-border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
-    transition: all 0.2s ease;
-    font-size: 0.95rem;
+    border-radius: var(--bs-border-radius); /* Apply default rounded corners */
+    padding: 0.85rem 1.1rem; /* Slightly more padding */
+    transition: all 0.25s ease;
+    font-size: 1rem; /* Standard font size for inputs */
+    background-color: var(--uipath-bg); /* Ensure consistent background */
 }
 
 .form-control:focus, .form-select:focus {
     border-color: var(--uipath-primary);
-    box-shadow: 0 0 0 3px rgba(250, 70, 22, 0.15);
+    box-shadow: 0 0 0 4px rgba(250, 70, 22, 0.18); /* Slightly larger, more diffused focus ring */
+    background-color: white;
 }
 
 /* Loading Indicator */
@@ -155,94 +234,132 @@ header {
 
 /* Search Input Group Customization */
 .input-group {
-    max-width: 350px;
-    border-radius: 20px;
+    max-width: 380px; /* Slightly wider search input */
+    border-radius: var(--bs-border-radius-xl); /* Larger rounded corners for search input group */
     overflow: hidden;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05); /* Softer, more diffused shadow */
+    transition: all 0.25s ease;
 }
+
+.input-group:focus-within {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08); /* Lift on focus */
+}
+
 .input-group .input-group-text {
     background: var(--uipath-light);
-    border: 1px solid var(--uipath-border);
-    border-right: none;
-    border-radius: 20px 0 0 20px !important;
-    padding-left: 1.1rem;
-    padding-right: 0.7rem;
-    display: flex;
-    align-items: center;
+    border: none; /* Remove border, rely on input group border-radius */
+    border-radius: var(--bs-border-radius-xl) 0 0 var(--bs-border-radius-xl) !important; /* Match overall input group radius */
+    padding-left: 1.3rem; /* Adjusted padding */
+    padding-right: 0.9rem;
 }
 .input-group .form-control {
-    border: 1px solid var(--uipath-border);
-    border-left: none;
-    border-radius: 0 20px 20px 0 !important;
+    border: none; /* Remove border, rely on input group border-radius */
+    border-radius: 0 var(--bs-border-radius-xl) var(--bs-border-radius-xl) 0 !important; /* Match overall input group radius */
     background: var(--uipath-light);
-    padding-left: 0.5rem;
-    padding-right: 1.25rem;
-    min-width: 0;
+    padding-left: 0.7rem; /* Adjusted padding */
+    padding-right: 1.5rem;
 }
 .input-group .form-control:focus {
     background: white;
-    box-shadow: 0 0 0 3px rgba(250, 70, 22, 0.15);
-}
-#search-input {
-    max-width: unset;
-    margin-bottom: 0;
-    border-radius: 0 20px 20px 0 !important;
-    background: transparent;
-    border: none;
-    box-shadow: none;
-}
-
-/* Remove double border on focus */
-.input-group .form-control:focus {
-    border-color: var(--uipath-primary);
-    outline: none;
+    box-shadow: none; /* Remove redundant box-shadow from individual input */
 }
 
 /* Modal Styling */
 .modal-content {
-    border-radius: 16px;
-    border: none;
-    box-shadow: var(--uipath-shadow);
+    border-radius: var(--bs-border-radius-xl); /* Larger rounded corners for modals */
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15); /* More prominent, diffused modal shadow */
 }
 
 .modal-header {
     background-color: var(--uipath-light);
-    border-radius: 16px 16px 0 0;
-    padding: 1.5rem;
+    border-radius: var(--bs-border-radius-xl) var(--bs-border-radius-xl) 0 0;
+    padding: 1.75rem 2.25rem; /* Increased padding */
+    border-bottom: 1px solid var(--uipath-border);
+}
+
+.modal-title {
+    font-weight: 700;
+    font-size: 1.4rem;
 }
 
 .modal-footer {
     background-color: var(--uipath-light);
-    border-radius: 0 0 16px 16px;
-    padding: 1.5rem;
+    border-radius: 0 0 var(--bs-border-radius-xl) var(--bs-border-radius-xl);
+    padding: 1.75rem 2.25rem; /* Increased padding */
+    border-top: 1px solid var(--uipath-border);
 }
 
 /* Section Headers */
 h2, h3 {
-    color: var(--uipath-text);
-    font-weight: 600;
-    margin-bottom: 1.5rem;
-    letter-spacing: -0.5px;
+    color: var(--uipath-dark);
+    font-weight: 700;
+    margin-bottom: 1.75rem; /* More space below headings */
+    letter-spacing: -0.025em;
+}
+
+h2 {
+    font-size: 2rem;
+}
+
+h3 {
+    font-size: 1.65rem;
+}
+
+/* General Layout Spacing */
+main {
+    padding: 2.5rem 3rem; /* More generous main content padding */
+}
+
+section {
+    margin-bottom: 3rem; /* More space between main sections */
+}
+
+.d-flex.gap-2.ms-auto {
+    align-items: center;
+    gap: 1rem !important; /* Slightly more space between header action items */
 }
 
 /* Empty State */
 .text-muted {
     color: #95a5a6 !important;
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     font-weight: 500;
+    padding: 1.5rem 0; /* More padding for better visual separation */
 }
 
-/* Card Styling */
-.card {
-    border: 1px solid var(--uipath-border);
-    border-radius: 12px;
-    box-shadow: var(--uipath-shadow);
-    transition: all 0.2s ease;
+/* Responsive adjustments */
+@media (max-width: 767.98px) {
+    .sidebar {
+        padding: 0.75rem;
+    }
+
+    .sidebar .nav-link {
+        padding: 0.6rem 0.75rem;
+    }
+
+    main {
+        padding: 2rem 1.5rem;
+    }
+
+    .d-flex.gap-2.ms-auto {
+        gap: 0.75rem !important;
+    }
+
+    h2 {
+        font-size: 1.6rem;
+    }
+    h3 {
+        font-size: 1.4rem;
+    }
 }
 
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+@media (min-width: 768px) {
+    .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+    }
 }
 
 /* Table Styling */
